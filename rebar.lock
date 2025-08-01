@@ -1,0 +1,4 @@
+[{<<"fast_html">>,
+  {git,"https://github.com/RomaniukVadim/fast_html.git",
+       {ref,"de222a92c578b5e3504fb5c419e2446f64e90bbe"}},
+  0}].

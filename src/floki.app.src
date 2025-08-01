@@ -1,0 +1,12 @@
+{application, floki,
+ [{description, "Floki"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib,
+    fast_html
+    ]},
+  {modules, []},
+  {env,[]}
+ ]}.

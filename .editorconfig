@@ -1,0 +1,31 @@
+root = true
+
+[*]
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+indent_style = space
+indent_size = 4
+max_line_length = 120
+spaces_around_brackets = none
+spaces_around_operators = true
+
+[*.erl]
+ij_erlang_binary_operation_wrap = off
+ij_erlang_call_parameters_wrap = off
+ij_erlang_keep_blank_lines_in_code = 0
+ij_erlang_space_after_comma = true
+ij_erlang_space_before_comma = false
+ij_erlang_spaces_around_additive_operators = true
+ij_erlang_spaces_around_assignment_operators = true
+ij_erlang_spaces_around_equality_operators = true
+ij_erlang_spaces_around_logical_operators = true
+ij_erlang_spaces_around_multiplicative_operators = true
+
+[*.yaml]
+indent_size = 2
+
+[{[Mm]akefile,*.mk}]
+indent_style = tab
+indent_size = 8
