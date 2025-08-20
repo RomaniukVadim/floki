@@ -29,7 +29,6 @@ find(HtmlTreeAsTuple, Selectors) when is_list(Selectors) ->
                     [Selector] = Selectors,
                     HtmlTreeAsTupleWrapped = list_wrap(HtmlTreeAsTuple),
                     Results = traverse_html_tuples(HtmlTreeAsTupleWrapped, Selector, []),
-
                     lists:reverse(Results);
                 false ->
                     Tree = html_tree:build(HtmlTreeAsTuple),
@@ -189,7 +188,7 @@ traverse_html_tuples([{_Type, _Attributes, Children} = HtmlTuple | Siblings],
 
     traverse_html_tuples(Siblings, Selector, NewAcc);
 
-traverse_html_tuples( [{_Type, _Attributes, Children} = HtmlTuple | Siblings],
+traverse_html_tuples([{_Type, _Attributes, Children} = HtmlTuple | Siblings],
                       #selector{
                          combinator = #combinator{ match_type = child} = Combinator} = Selector,
                       Acc) ->
