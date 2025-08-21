@@ -577,7 +577,7 @@ tokenize_charref_raw(Bin, S = #decoder{offset = O}, Start) ->
             %% but the functionality below is equivalent;
             <<_:Start/binary, Raw:Len/binary, _/binary>> = Bin,
 
-            case 'Elixir.Floki.Entities':decode(<<$&, Raw/binary, $;>>) of
+            case entities:decode(<<$&, Raw/binary, $;>>) of
                 {ok, <<CP/utf8>>} ->
                     {CP, ?INC_COL(S)};
                 _ ->

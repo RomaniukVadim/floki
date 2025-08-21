@@ -1,6 +1,7 @@
 -module(selector).
 
--export([match/3]).
+-export([match/3,
+        id_match/2]).
 
 -include("selector/selector_combinator.hrl").
 -include("selector/selector_pseudo_class.hrl").

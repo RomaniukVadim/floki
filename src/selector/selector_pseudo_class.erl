@@ -1,12 +1,103 @@
 -module(selector_pseudo_class).
 -include("selector_pseudo_class.hrl").
 -include("selector_functional.hrl").
+-include("../html_tree/text.hrl").
 -include("../html_tree.hrl").
 
 -export([match_nth_child/3,
-        match_nth_of_type/3,
-        match_nth_last_child/3,
-        match_nth_last_of_type/3]).
+         match_nth_of_type/3,
+         match_nth_last_child/3,
+         match_nth_last_of_type/3,
+         match_checked/1,
+         match_disabled/1,
+         match_contains/3,
+         match_icontains/3,
+         match_root/2,
+         match_has/3]).
+
+-define(disableable_html_nodes(X), X =:= <<"button">> orelse
+        X =:= <<"input">> orelse
+        X =:= <<"select">> orelse
+        X =:= <<"option">> orelse
+        X =:= <<"textarea">>).
+
+match_checked(#html_node{type = <<"input">>} = HtmlNode) ->
+    attribute_is_present(HtmlNode#html_node.attributes, <<"checked">>);
+
+match_checked(#html_node{type = <<"option">>} = HtmlNode) ->
+    attribute_is_present(HtmlNode#html_node.attributes, <<"selected">>);
+
+match_checked({<<"input">>, Attributes, _Children}) ->
+    attribute_is_present(Attributes, <<"checked">>);
+
+match_checked({<<"option">>, Attributes, _Children}) ->
+    attribute_is_present(Attributes, <<"selected">>);
+
+match_checked(_) -> false.
+
+match_disabled(#html_node{type = Type} = HtmlNode) when ?disableable_html_nodes(Type) ->
+    attribute_is_present(HtmlNode#html_node.attributes, <<"disabled">>);
+
+match_disabled({Type, Attributes, _Children}) when ?disableable_html_nodes(Type) ->
+    attribute_is_present(Attributes, <<"disabled">>);
+
+match_disabled(_HtmlNode) -> false.
+
+match_contains(Tree, HtmlNode, #pseudo_class{value = Value}) ->
+    Predicate = fun(Id) ->
+        case map:get(Id, Tree#html_tree.nodes) of
+          #text{content = Content} ->
+                binary:match(Content, Value) =/= nomatch;
+          _ -> false
+        end
+      end,
+
+    lists:any(Predicate, HtmlNode#html_node.children_nodes_ids).
+
+% Case insensitive contains
+match_icontains(Tree, HtmlNode, #pseudo_class{value = Value}) ->
+    DowncaseValue = list_to_binary(string:lowercase(binary_to_list(Value))),
+
+    Predicate = fun(Id) ->
+        case maps:get(Id, Tree#html_tree.nodes) of
+            #text{content = Content} ->
+                DowncasedContent = list_to_binary(string:lowercase(binary_to_list(Content))),
+                binary:match(DowncasedContent, DowncaseValue) =/= nomatch;
+            _ ->
+                false
+        end
+    end,
+    lists:any(Predicate, HtmlNode#html_node.children_nodes_ids).
+
+%% For attribute lists, like [{href, "/"}, {class, "main"}]
+attribute_is_present(Attributes, AttributeName) when is_list(Attributes) ->
+    lists:keyfind(AttributeName, 1, Attributes) =/= false;
+
+%% For attribute maps, like #{href => "/", class => "main"}
+attribute_is_present(Attributes, AttributeName) when is_map(Attributes) ->
+    case maps:find(AttributeName, Attributes) of
+        {ok, Value} ->
+            Value =/= undefined;
+        error ->
+            false
+    end.
+
+
+match_root(HtmlNode, Tree) ->
+    lists:member(HtmlNode#html_node.node_id, Tree#html_tree.root_nodes_ids).
+
+match_has(Tree, HtmlNode, #pseudo_class{value = Value} = PseudoClass) ->
+    Predicate = fun(InnerSelector) ->
+                        InnerPredicate = fun(Id) ->
+                                                 Child = maps:get(Id, Tree#html_tree.nodes),
+
+                                                 is_record(Child, html_node) andalso
+                                                 (selector:match(Child, InnerSelector, Tree) orelse
+                                                  match_has(Tree, Child, PseudoClass))
+                                         end,
+                        lists:any(InnerPredicate, HtmlNode#html_node.children_nodes_ids)
+                end,
+    lists:any(Predicate, Value).
 
 match_nth_child(Tree, HtmlNode, #pseudo_class{value = Value}) ->
     PseudoNodes = pseudo_nodes(Tree, HtmlNode),
@@ -41,7 +132,7 @@ pseudo_nodes(Tree, #html_node{parent_node_id = ParentNodeId}) ->
 
 filter_only_html_nodes(Ids, Nodes) ->
   Pred = fun(Id) ->
-      case Nodes of 
+      case Nodes of
         #{Id := #html_node{}} -> true;
         _ -> false
       end
@@ -50,7 +141,7 @@ filter_only_html_nodes(Ids, Nodes) ->
 
 filter_nodes_by_type(Ids, Nodes, Type) ->
   Pred = fun(Id) ->
-      case Nodes of 
+      case Nodes of
         #{Id := #html_node{type = Type}} -> true;
         _ -> false
       end

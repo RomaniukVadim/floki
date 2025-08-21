@@ -1,10 +1,29 @@
 -module(finder).
 
--export([find/2]).
+-export([find_by_id/2,
+         find/2,
+         list_wrap/1]).
 
 -include("html_tree.hrl").
 -include("selector/selector_combinator.hrl").
 -include("selector/selector_pseudo_class.hrl").
+
+-spec find_by_id(#html_tree{} | #html_node{}, binary()) -> #html_node{} | undefined.
+find_by_id(HtmlTreeAsTuple, Id) ->
+    HtmlTreeAsTupleWrapped = list_wrap(HtmlTreeAsTuple),
+    traverse_find_by_id(HtmlTreeAsTupleWrapped, Id).
+
+traverse_find_by_id([{_Type, _Attributes, Children} = HtmlTuple | Rest], Id) ->
+    case selector:id_match(HtmlTuple, Id) of
+        true -> HtmlTuple;
+        false -> traverse_find_by_id(Children, Id) orelse traverse_find_by_id(Rest, Id)
+    end;
+
+traverse_find_by_id([_ | Rest], Id) ->
+    traverse_find_by_id(Rest, Id);
+
+traverse_find_by_id([], _Id) ->
+    undefined.
 
 find([], _) -> [];
 find(HtmlAsString, _) when is_binary(HtmlAsString) -> [];

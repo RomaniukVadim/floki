@@ -7,6 +7,10 @@
         delete_node/2,
         to_tuple_list/1,
         to_tuple/2,
+        enumerable_count/1,
+        enumerable_slice/1,
+        enumerable_member/2,
+        enumerable_reduce/3,
         patch_nodes/2]).
 
 build({comment, Comment}) ->
@@ -123,8 +127,8 @@ to_tuple(_Tree, #comment{content = Comment}) -> {comment, Comment};
 
 to_tuple(Tree, HtmlNode) ->
   ReversedNode = lists:reverse(HtmlNode#html_node.children_nodes_ids),
-  Pred = fun(Id) -> 
-             to_tuple(Tree, maps:get(Id, Tree#html_tree.nodes)) 
+  Pred = fun(Id) ->
+             to_tuple(Tree, maps:get(Id, Tree#html_tree.nodes))
          end,
   Children = lists:map(Pred, ReversedNode),
 
@@ -161,7 +165,7 @@ delete_node_from_nodes(Nodes, HtmlNode) ->
         ChildrenIds = list:delete(HtmlNode#html_node.node_id, ParentNode#html_node.children_nodes_ids),
         NewParent = ParentNode#html_node{children_nodes_ids = ChildrenIds},
         TreeNodes#{NewParent#html_node.node_id => newParent};
-      false -> 
+      false ->
         TreeNodes
     end.
 
@@ -257,7 +261,7 @@ patch_nodes(HtmlTree, OperationWithNodes) ->
 
     lists:foldl(Reducer, HtmlTree, OperationWithNodes).
 
-%% @doc 
+%% @doc
 %% Mimics the core logic of Elixir's put_in/3 for lists.
 -spec put_in(list(), integer(), any()) -> list().
 put_in(List, Index, NewElement) ->
@@ -291,12 +295,12 @@ enumerable_do_reduce(HtmlTree = #html_tree{node_ids = [H | T]}, {cont, Acc}, Fun
 
 %   defimpl Inspect do
 %     import Inspect.Algebra
-% 
+%
 %     def inspect(html_tree, opts) do
 %       open = "#Floki.HTMLTree["
 %       close = "]"
 %       container_opts = [separator: "", break: :flex]
-% 
+%
 %       container_doc(
 %         open,
 %         nodes_with_tree(html_tree, html_tree.root_nodes_ids),
@@ -306,10 +310,10 @@ enumerable_do_reduce(HtmlTree = #html_tree{node_ids = [H | T]}, {cont, Acc}, Fun
 %         container_opts
 %       )
 %     end
-% 
+%
 %     defp fun({html_tree, %HTMLNode{} = html_node}, opts) do
 %       {open, close, container_opts} = build_node(html_node, opts)
-% 
+%
 %       container_doc(
 %         open,
 %         nodes_with_tree(html_tree, html_node.children_nodes_ids),
@@ -319,12 +323,12 @@ enumerable_do_reduce(HtmlTree = #html_tree{node_ids = [H | T]}, {cont, Acc}, Fun
 %         container_opts
 %       )
 %     end
-% 
+%
 %     defp fun(%Comment{content: comment}, opts),
 %       do: color(concat(["<!-- ", comment, " -->"]), :comment, opts)
-% 
+%
 %     defp fun(%Text{content: text}, opts), do: color(text, :string, opts)
-% 
+%
 %     defp nodes_with_tree(html_tree, nodes_ids) do
 %       nodes_ids
 %       |> Enum.reverse()
@@ -334,11 +338,11 @@ enumerable_do_reduce(HtmlTree = #html_tree{node_ids = [H | T]}, {cont, Acc}, Fun
 %         end
 %       end)
 %     end
-% 
+%
 %     defp build_node(%HTMLNode{} = node, opts) do
 %       tag_color = :map
 %       attribute_color = :map
-% 
+%
 %       built_attributes =
 %         for {name, value} <- node.attributes do
 %           concat([
@@ -347,17 +351,17 @@ enumerable_do_reduce(HtmlTree = #html_tree{node_ids = [H | T]}, {cont, Acc}, Fun
 %           ])
 %         end
 %         |> concat()
-% 
+%
 %       open =
 %         concat([
 %           color("<#{node.type}", tag_color, opts),
 %           built_attributes,
 %           color(">", tag_color, opts)
 %         ])
-% 
+%
 %       close = color("</#{node.type}>", tag_color, opts)
 %       container_opts = [separator: "", break: :strict]
-% 
+%
 %       {open, close, container_opts}
 %     end
 %   end
