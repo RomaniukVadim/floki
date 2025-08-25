@@ -4,59 +4,62 @@
          encode/1]).
 
 -doc """
-  Decode charrefs and numeric charrefs.
+Decode charrefs and numeric charrefs.
 
-  This is useful if you want to decode any charref. The tokenizer will
-  use a different algorithm, so this may not be necessary.
-  """.
+This is useful if you want to decode any charref. The tokenizer will
+                                                  use a different algorithm, so this may not be necessary.
+""".
 
-  decode(Charref) when is_binary(Charref) ->
-      case Charref of
-          <<"&#", Numeric/binary>> ->
-              case extract_byte_from_num_charref(Numeric) of
-                  {ok, Number} ->
-                      case numeric_charref:to_unicode_number(Number) of
-                          {ok, {_, Unicode_number}} -> {ok, <<Unicode_number/utf8>>};
-                          {error, {negative_number, _}} -> {error, not_found}
-                      end;
-                  error -> {error, not_found}
-              end;
+decode(Charref) when is_binary(Charref) ->
+    case Charref of
+        <<"&#", Numeric/binary>> ->
+            case extract_byte_from_num_charref(Numeric) of
+                {ok, Number} ->
+                    case numeric_charref:to_unicode_number(Number) of
+                        {ok, {_, Unicode_number}} -> {ok, <<Unicode_number/utf8>>};
+                        {error, {negative_number, _}} -> {error, not_found}
+                    end;
+                error -> {error, not_found}
+            end;
 
-          <<"&", _/binary>> = Binary ->
-              case codepoints:get(Binary) of
-                  [] -> {error, not_found};
-                  Codepoints -> {ok, list_to_binary(Codepoints)}
-              end;
-          _Other -> {error, not_found}
-      end.
+        <<"&", _/binary>> = Binary ->
+            case codepoints:get(Binary) of
+                [] -> {error, not_found};
+                Codepoints -> {ok, list_to_binary(Codepoints)}
+            end;
+        _Other -> {error, not_found}
+    end.
 
-extract_byte_from_num_charref(<<MaybeX, Rest/binary>>) when MaybeX =:= $x; MaybeX =:= $X ->
-    case integer:parse(Rest, 16) of
-        {Number, _} -> {ok, Number};
-        {error, _}  -> error
+extract_byte_from_num_charref(<<MaybeX, Rest/binary>>) when MaybeX =:= $x orelse
+                                                            MaybeX =:= $X ->
+    % 16 integer format
+    case string:to_integer(Rest) of
+        {error, _}  -> error;
+        {Number, _} -> {ok, Number}
     end;
 
 extract_byte_from_num_charref(Binary) when is_binary(Binary) ->
-    case integer:parse(Binary, 10) of
-        {Number, _} -> {ok, Number};
-        {error, _}  -> error
+    % 10 integer format
+    case string:to_integer(Binary) of
+        {error, _}  -> error;
+        {Number, _} -> {ok, Number}
     end.
 
 -doc """
-  Encode HTML entities in a string.
+Encode HTML entities in a string.
 
-  Currently only encodes the main HTML entities:
+Currently only encodes the main HTML entities:
 
-  * single quote - ' - is replaced by "&#39;".
-  * double quote - " - is replaced by "&quot;".
-  * ampersand - & - is replaced by "&amp;".
-  * less-than sign - < - is replaced by "&lt;".
-  * greater-than sign - > - is replaced by "&gt;".
+* single quote - ' - is replaced by "&#39;".
+* double quote - " - is replaced by "&quot;".
+                                           * ampersand - & - is replaced by "&amp;".
+* less-than sign - < - is replaced by "&lt;".
+* greater-than sign - > - is replaced by "&gt;".
 
-  All other symbols are going to remain the same.
+All other symbols are going to remain the same.
 
-  Optimized IO data implementation from Plug.HTML
-  """.
+Optimized IO data implementation from Plug.HTML
+""".
 
 -spec encode(iodata()) -> iodata().
 encode(String) when is_binary(String) ->
@@ -92,9 +95,15 @@ encode(<<>>, _Skip, _Original, Acc) ->
 %% If we find a special character, the safe substring has ended.
 encode(<<"<", Rest/bits>>, Skip, Original, Acc, Len) ->
     Part = binary:part(Original, Skip, Len),
-    % Go back to initial scanning mode (encode/4)
     encode(Rest, Skip + Len + 1, Original, [Acc, Part | "&lt;"]);
-% ... clauses for >, &, ", ' would go here, same as above ...
+encode(<<">", Rest/bits>>, Skip, Original, Acc, Len) ->
+    encode(Rest, Skip + Len + 1, Original, [Acc | "&gt;"]);
+encode(<<"&", Rest/bits>>, Skip, Original, Acc, Len) ->
+    encode(Rest, Skip + Len + 1, Original, [Acc | "&amp;"]);
+encode(<<"\"", Rest/bits>>, Skip, Original, Acc, Len) ->
+    encode(Rest, Skip + Len + 1, Original, [Acc | "&quot;"]);
+encode(<<"'", Rest/bits>>, Skip, Original, Acc, Len) ->
+    encode(Rest, Skip + Len + 1, Original, [Acc | "&#39;"]);
 
 % If we find another safe character, just increment the length counter.
 encode(<<_Char, Rest/bits>>, Skip, Original, Acc, Len) ->

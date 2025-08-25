@@ -143,8 +143,8 @@ do_delete(Tree, [HtmlNode | T], StackIds) ->
     do_delete(
       Tree#html_tree{
         nodes = NewTreeNodes,
-        node_ids = list:delete(HtmlNode#html_node.node_id, Tree#html_tree.node_ids),
-        root_nodes_ids = list:delete(HtmlNode#html_node.node_id, Tree#html_tree.root_nodes_ids)
+        node_ids = lists:delete(HtmlNode#html_node.node_id, Tree#html_tree.node_ids),
+        root_nodes_ids = lists:delete(HtmlNode#html_node.node_id, Tree#html_tree.root_nodes_ids)
        },
       T,
       IdsForStack ++ StackIds
@@ -162,7 +162,7 @@ delete_node_from_nodes(Nodes, HtmlNode) ->
 
     case ParentNode =/= undefined of
       true ->
-        ChildrenIds = list:delete(HtmlNode#html_node.node_id, ParentNode#html_node.children_nodes_ids),
+        ChildrenIds = lists:delete(HtmlNode#html_node.node_id, ParentNode#html_node.children_nodes_ids),
         NewParent = ParentNode#html_node{children_nodes_ids = ChildrenIds},
         TreeNodes#{NewParent#html_node.node_id => newParent};
       false ->

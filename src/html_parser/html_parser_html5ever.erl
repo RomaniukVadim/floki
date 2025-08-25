@@ -1,4 +1,5 @@
 -module(html_parser_html5ever).
+-behaviour(html_parser).
 
 -export([parse_document/2,
          parse_fragment/2,

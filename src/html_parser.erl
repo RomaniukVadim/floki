@@ -5,9 +5,20 @@
 
 -define(DEFAULT_PARSER, html_parser_mochiweb).
 
+-type result(Success) :: {ok, Success} | {error, binary()}.
+-type html() :: binary() | iodata().
+
+-callback parse_document(html(), list()) -> result(floki:html_tree()).
+-callback parse_fragment(html(), list()) -> result(floki:html_tree()).
+
+-callback parse_document_with_attributes_as_maps(html(), list()) ->
+              result(floki:html_tree()).
+-callback parse_fragment_with_attributes_as_maps(html(), list()) ->
+              result(floki:html_tree()).
+
 parse_document(Html, Opts) ->
   DefaultOpts = [{attributes_as_maps, false},
-                 {html_parser, parser()}, 
+                 {html_parser, parser()},
                  {parser_args, []}],
 
   {ok, NewOpts} = floki:validate(Opts, DefaultOpts),

@@ -1,4 +1,5 @@
 -module(html_parser_mochiweb).
+-behaviour(html_parser).
 
 -export([parse_document/2,
         parse_fragment/2,
@@ -18,8 +19,10 @@
 
 parse_document(Html, Args) ->
     NewHtml = <<"<#", ?root_node/binary, ">", Html/binary, "</#",?root_node/binary,">">>,
-    {?root_node, _, Parsed} = floki_mochi_html:parse(NewHtml, Args),
-    {ok, Parsed}.
+    % todo: why i'm not getting tuple with 3 elements?
+    %{?root_node, _, Parsed} = floki_mochi_html:parse(NewHtml, Args),
+    Parsed = floki_mochi_html:parse(NewHtml, Args),
+    {ok, finder:list_wrap(Parsed)}.
 
   % NOTE: mochi_html cannot make a distinction of a fragment and document.
 parse_fragment(Html, Args) -> parse_document(Html, Args).
