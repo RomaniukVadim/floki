@@ -1,6 +1,7 @@
 -module(floki_tests).
 
 -include_lib("eunit/include/eunit.hrl").
+-include("src/selector.hrl").
 
 -define(current_parser, application:get_env(floki, html_parser, mochiweb)).
 -define(plain_text_tags, [
@@ -1025,7 +1026,7 @@ get_one_element_when_search_for_multiple_and_just_one_exist_test() ->
 
   % Floki.find/2 - Pseudo-class
 
-get_elements_by_nth_child_and_first_child_pseudo_classes_test()_->
+get_elements_by_nth_child_and_first_child_pseudo_classes_test() ->
     Html = <<"
     <html>
     <body>
@@ -1079,7 +1080,7 @@ get_root_elements_by_nth_child_and_first_child_pseudo_classes_test() ->
     assert_find(Tree, <<"p:nth-child(2)">>, [{<<"p">>, [], [<<"B">>]}]),
     assert_find(Tree, <<"p:first-child">>, [{<<"p">>, [], [<<"A">>]}]).
 
-get_elements_by_nth_last_child_pseudo_class_test()_->
+get_elements_by_nth_last_child_pseudo_class_test() ->
     Html = <<"
     <html>
     <body>
@@ -1234,7 +1235,7 @@ get_root_elements_by_nth_of_type_first_of_type_and_last_of_type_pseudo_classes_t
     assert_find(Tree, <<":nth-of-type(2)">>, [
       {<<"p">>, [], [<<"C">>]},
       {<<"div">>, [], [<<"D">>]}
-    ])
+    ]),
 
     assert_find(Tree, <<":last-of-type">>, [
       {<<"p">>, [], [<<"C">>]},
@@ -1323,320 +1324,305 @@ not_pseudo_class_test() ->
     assert_find(Html, <<"a.link:not(:nth-child(2))">>, ExpectedResult),
     assert_find(Html, <<"a.link:not([style*=crazy])">>, ExpectedResult).
 
-  test "not pseudo-class with multiple selectors" do
-    html =
-      document!("""
+not_pseudo_class_with_multiple_selectors_test() ->
+    Html =
+      document(<<"
       <html>
         <body>
-          <div id="links">
-            <a class="link foo">A foo</a>
-            <a class="link bar" style="crazyColor">A bar</a>
-            <a class="link baz">A baz</a>
-            <a class="link bin">A bin</a>
+          <div id=\"links\">
+            <a class=\"link foo\">A foo</a>
+            <a class=\"link bar\" style=\"crazyColor\">A bar</a>
+            <a class=\"link baz\">A baz</a>
+            <a class=\"link bin\">A bin</a>
           </div>
         </body>
       </html>
-      """)
+      ">>),
 
-    foo_match = {"a", [{"class", "link foo"}], ["A foo"]}
-    bin_match = {"a", [{"class", "link bin"}], ["A bin"]}
+    FooMatch = {<<"a">>, [{<<"class">>, <<"link foo">>}], [<<"A foo">>]},
+    BinMatch = {<<"a">>, [{<<"class">>, <<"link bin">>}], [<<"A bin">>]},
 
-    assert_find(html, "a.link:not(.bar, .baz)", [foo_match, bin_match])
-    assert_find(html, "a.link:not(.bar,.baz)", [foo_match, bin_match])
-    assert_find(html, "a.link:not(.bar):not(.baz)", [foo_match, bin_match])
-    assert_find(html, "a.link:not(.bar, .bin):not(.baz)", [foo_match])
-    assert_find(html, "a.link:not([style*=crazy], .bin):not(.baz)", [foo_match])
-  end
+    assert_find(Html, <<"a.link:not(.bar, .baz)">>, [FooMatch, BinMatch]),
+    assert_find(Html, <<"a.link:not(.bar,.baz)">>, [FooMatch, BinMatch]),
+    assert_find(Html, <<"a.link:not(.bar):not(.baz)">>, [FooMatch, BinMatch]),
+    assert_find(Html, <<"a.link:not(.bar, .bin):not(.baz)">>, [FooMatch]),
+    assert_find(Html, <<"a.link:not([style*=crazy], .bin):not(.baz)">>, [FooMatch]).
 
-  test "contains pseudo-class" do
-    doc = document!(html_body(~s(<p>One</p><p>Two</p><div>nothing<b>42</b></div>)))
+contains_pseudo_class_test() ->
+    Doc = document(html_body(<<"<p>One</p><p>Two</p><div>nothing<b>42</b></div>">>)),
 
-    assert_find(doc, "p:fl-contains('Two')", [
-      {"p", [], ["Two"]}
-    ])
-  end
+    assert_find(Doc, <<"p:fl-contains('Two')">>, [
+      {<<"p">>, [], [<<"Two">>]}
+    ]).
 
-  test "icontains pseudo-class" do
-    doc = document!(html_body(~s(<p>One</p><p>Two</p><div>nothing<b>42</b></div>)))
+icontains_pseudo_class_test() ->
+    Doc = document(html_body(<<"<p>One</p><p>Two</p><div>nothing<b>42</b></div>">>)),
 
-    assert_find(doc, "p:fl-icontains('two')", [
-      {"p", [], ["Two"]}
-    ])
-  end
+    assert_find(Doc, <<"p:fl-icontains('two')">>, [
+      {<<"p">>, [], [<<"Two">>]}
+    ]).
 
-  test "contains psuedo-class with substring" do
-    html =
-      document!(
-        html_body(~s(<ul><li>A podcast</li><li>Another podcast</li><li>A video</li></ul>))
-      )
+contains_psuedo_class_with_substring_test() ->
+    Html =
+      document(
+        html_body(<<"<ul><li>A podcast</li><li>Another podcast</li><li>A video</li></ul>">>)
+      ),
 
-    expected = [
-      {"li", [], ["A podcast"]},
-      {"li", [], ["Another podcast"]}
-    ]
+    Expected = [
+      {<<"li">>, [], [<<"A podcast">>]},
+      {<<"li">>, [], [<<"Another podcast">>]}
+    ],
 
-    assert_find(html, ":fl-contains(' podcast')", expected)
-  end
+    assert_find(Html, <<":fl-contains(' podcast')">>, Expected).
 
-  test "checked pseudo-class" do
-    html =
-      document!(
-        html_body(~s"""
-        <input type="checkbox" name="1" checked>
-        <input type="checkbox" name="2" checked="checked">
-        <input type="checkbox" name="3">
-        <input type="radio" name="4" checked>
-        <input type="radio" name="5">
+checked_pseudo_class_test() ->
+    Html =
+      document(
+        html_body(<<"
+        <input type=\"checkbox\" name=\"1\" checked>
+        <input type=\"checkbox\" name=\"2\" checked=\"checked\">
+        <input type=\"checkbox\" name=\"3\">
+        <input type=\"radio\" name=\"4\" checked>
+        <input type=\"radio\" name=\"5\">
         <select>
-          <option id="option-6" selected>6</option>
+          <option id=\"option-6\" selected>6</option>
           <option>7</option>
         </select>
-        """)
-      )
+        ">>)
+      ),
 
-    html_tree = HTMLTree.build(html)
+    HtmlTree = html_tree:build(Html),
 
-    results = Floki.find(html, ":checked")
+    Results = floki:find(Html, <<":checked">>),
 
-    html_tree_results =
-      Enum.map(
-        Floki.Finder.find(html_tree, ":checked"),
-        fn html_node -> HTMLTree.to_tuple(html_tree, html_node) end
-      )
+    F = fun(HtmlNode) -> html_tree:to_tuple(HtmlTree, HtmlNode) end,
+    HtmlTreeResults = lists:map(F, finder:find(HtmlTree, <<":checked">>)),
 
-    assert [
-             {"input", [{"type", "checkbox"}, {"name", "1"}, {"checked", _}], []},
-             {"input", [{"type", "checkbox"}, {"name", "2"}, {"checked", _}], []},
-             {"input", [{"type", "radio"}, {"name", "4"}, {"checked", _}], []},
-             {"option", [{"id", "option-6"}, {"selected", _}], ["6"]}
-           ] = results
+    ?assert([
+             {<<"input">>, [{<<"type">>, <<"checkbox">>}, {<<"name">>, <<"1">>}, {<<"checked">>, _}], []},
+             {<<"input">>, [{<<"type">>, <<"checkbox">>}, {<<"name">>, <<"2">>}, {<<"checked">>, _}], []},
+             {<<"input">>, [{<<"type">>, <<"radio">>}, {<<"name">>, <<"4">>}, {<<"checked">>, _}], []},
+             {<<"option">>, [{<<"id">>, <<"option-6">>}, {<<"selected">>, _}], [<<"6">>]}
+            ] = Results),
 
-    assert html_tree_results == results
-  end
+    ?assertEqual(HtmlTreeResults,  Results).
 
-  test "disabled pseudo-class" do
-    html =
-      document!(
-        html_body(~s"""
-        <button id="button-1" disabled="disabled">button 1</button>
-        <button id="button-2" disabled>button 2</button>
-        <button id="button-3">button 3</button>
+disabled_pseudo_class_test() ->
+    Html =
+      document(
+        html_body(<<"
+        <button id=\"button-1\" disabled=\"disabled\">button 1</button>
+        <button id=\"button-2\" disabled>button 2</button>
+        <button id=\"button-3\">button 3</button>
 
-        <input type="text" name="text 1" disabled="disabled">
-        <input type="text" name="text 2" disabled>
-        <input type="text" name="text 3">
+        <input type=\"text\" name=\"text 1\" disabled=\"disabled\">
+        <input type=\"text\" name=\"text 2\" disabled>
+        <input type=\"text\" name=\"text 3\">
 
-        <select name="select 1" disabled="disabled"><option value="option 1">Option 1</option></select>
-        <select name="select 2" disabled><option value="option 2">Option 2</option></select>
-        <select name="select 3"><option value="option 3">Option 3</option></select>
+        <select name=\"select 1\" disabled=\"disabled\"><option value=\"option 1\">Option 1</option></select>
+        <select name=\"select 2\" disabled><option value=\"option 2\">Option 2</option></select>
+        <select name=\"select 3\"><option value=\"option 3\">Option 3</option></select>
 
-        <select name="select 4"><option value="option 4" disabled="disabled">Option 4</option></select>
-        <select name="select 5"><option value="option 5" disabled>Option 5</option></select>
-        <select name="select 6"><option value="option 6">Option 6</option></select>
+        <select name=\"select 4\"><option value=\"option 4\" disabled=\"disabled\">Option 4</option></select>
+        <select name=\"select 5\"><option value=\"option 5\" disabled>Option 5</option></select>
+        <select name=\"select 6\"><option value=\"option 6\">Option 6</option></select>
 
-        <textarea name="text area 1" disabled="disabled">Text Area 1</textarea>
-        <textarea name="text area 2" disabled>Text Area 2</textarea>
-        <textarea name="text area 3">Text Area 3</textarea>
-        """)
-      )
+        <textarea name=\"text area 1\" disabled=\"disabled\">Text Area 1</textarea>
+        <textarea name=\"text area 2\" disabled>Text Area 2</textarea>
+        <textarea name=\"text area 3\">Text Area 3</textarea>
+        ">>)
+      ),
 
-    html_tree = HTMLTree.build(html)
+    HtmlTree = html_tree:build(Html),
 
-    results = Floki.find(html, ":disabled")
+    Results = floki:find(Html, <<":disabled">>),
 
-    html_tree_results =
-      Enum.map(
-        Floki.Finder.find(html_tree, ":disabled"),
-        fn html_node -> HTMLTree.to_tuple(html_tree, html_node) end
-      )
+    F = fun(HtmlNode) -> html_tree:to_tuple(HtmlTree, HtmlNode) end,
+    HtmlTreeResults = lists:map(F, finder:find(HtmlTree, <<":disabled">>)),
 
-    assert [
-             {"button", [{"id", "button-1"}, {"disabled", _}], ["button 1"]},
-             {"button", [{"id", "button-2"}, {"disabled", _}], ["button 2"]},
-             {"input", [{"type", "text"}, {"name", "text 1"}, {"disabled", _}], []},
-             {"input", [{"type", "text"}, {"name", "text 2"}, {"disabled", _}], []},
-             {"select", [{"name", "select 1"}, {"disabled", _}],
-              [{"option", [{"value", "option 1"}], ["Option 1"]}]},
-             {"select", [{"name", "select 2"}, {"disabled", _}],
-              [{"option", [{"value", "option 2"}], ["Option 2"]}]},
-             {"option", [{"value", "option 4"}, {"disabled", _}], ["Option 4"]},
-             {"option", [{"value", "option 5"}, {"disabled", _}], ["Option 5"]},
-             {"textarea", [{"name", "text area 1"}, {"disabled", _}], ["Text Area 1"]},
-             {"textarea", [{"name", "text area 2"}, {"disabled", _}], ["Text Area 2"]}
-           ] = results
+    ?assert([
+             {<<"button">>, [{<<"id">>, <<"button-1">>}, {<<"disabled">>, _}], [<<"button 1">>]},
+             {<<"button">>, [{<<"id">>, <<"button-2">>}, {<<"disabled">>, _}], [<<"button 2">>]},
+             {<<"input">>, [{<<"type">>, <<"text">>}, {<<"name">>, <<"text 1">>}, {<<"disabled">>, _}], []},
+             {<<"input">>, [{<<"type">>, <<"text">>}, {<<"name">>, <<"text 2">>}, {<<"disabled">>, _}], []},
+             {<<"select">>, [{<<"name">>, <<"select 1">>}, {<<"disabled">>, _}],
+              [{<<"option">>, [{<<"value">>, <<"option 1">>}], [<<"Option 1">>]}]},
+             {<<"select">>, [{<<"name">>, <<"select 2">>}, {<<"disabled">>, _}],
+              [{<<"option">>, [{<<"value">>, <<"option 2">>}], [<<"Option 2">>]}]},
+             {<<"option">>, [{<<"value">>, <<"option 4">>}, {<<"disabled">>, _}], [<<"Option 4">>]},
+             {<<"option">>, [{<<"value">>, <<"option 5">>}, {<<"disabled">>, _}], [<<"Option 5">>]},
+             {<<"textarea">>, [{<<"name">>, <<"text area 1">>}, {<<"disabled">>, _}], [<<"Text Area 1">>]},
+             {<<"textarea">>, [{<<"name">>, <<"text area 2">>}, {<<"disabled">>, _}], [<<"Text Area 2">>]}
+           ] = Results),
 
-    assert html_tree_results == results
-  end
+    ?assertEqual(HtmlTreeResults, Results).
 
-  test "root pseudo-class" do
-    doc = document!(html_body("<div><div>a</div><div>b</div></div>"))
+root_pseudo_class_test() ->
+    Doc = document(html_body(<<"<div><div>a</div><div>b</div></div>">>)),
 
-    assert_find(doc, ":root>body>div>div", [
-      {"div", [], ["a"]},
-      {"div", [], ["b"]}
-    ])
-  end
+    assert_find(Doc, <<":root>body>div>div">>, [
+      {<<"div">>, [], [<<"a">>]},
+      {<<"div">>, [], [<<"b">>]}
+    ]).
 
-  test "has pseudo-class simple" do
-    html =
-      """
+has_pseudo_class_simple_test() ->
+    RawHtml =
+      <<"
       <div>
         <h1>Header</h1>
-        <p class="foo">some data</p>
+        <p class=\"foo\">some data</p>
       </div>
       <div>
         <h2>Header 2</h2>
-        <img src="https://example.com"></img>
+        <img src=\"https://example.com\"></img>
       </div>
       <div>
         <h3>Header 3</h3>
-        <p class="bar">some data</p>
+        <p class=\"bar\">some data</p>
       </div>
       <div>
-        <img src="picture.jpg"></img>
-        <input type="checkbox" checked></input>
+        <img src=\"picture.jpg\"></img>
+        <input type=\"checkbox\" checked></input>
       </div>
-      """
-      |> String.replace(~r/\n|\s{2,}/, "")
-      |> html_body()
-      |> document!()
+      ">>,
+      Replaced = re:replace(RawHtml, "\\n|\\s{2,}", "", [global, {return, binary}]),
+      HtmlBody = html_body(Replaced),
+      Html = document(HtmlBody),
 
-    assert_find(html, "div:has(h1)", [
-      {"div", [],
+    assert_find(Html, <<"div:has(h1)">>, [
+      {<<"div">>, [],
        [
-         {"h1", [], ["Header"]},
-         {"p", [{"class", "foo"}], ["some data"]}
+         {<<"h1">>, [], [<<"Header">>]},
+         {<<"p">>, [{<<"class">>, <<"foo">>}], [<<"some data">>]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "div:has(h2)", [
-      {"div", [],
+    assert_find(Html, <<"div:has(h2)">>, [
+      {<<"div">>, [],
        [
-         {"h2", [], ["Header 2"]},
-         {"img", [{"src", "https://example.com"}], []}
+         {<<"h2">>, [], [<<"Header 2">>]},
+         {<<"img">>, [{<<"src">>, <<"https://example.com">>}], []}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "div:has(p)", [
-      {"div", [],
+    assert_find(Html, <<"div:has(p)">>, [
+      {<<"div">>, [],
        [
-         {"h1", [], ["Header"]},
-         {"p", [{"class", "foo"}], ["some data"]}
+         {<<"h1">>, [], [<<"Header">>]},
+         {<<"p">>, [{<<"class">>, <<"foo">>}], [<<"some data">>]}
        ]},
-      {"div", [],
+      {<<"div">>, [],
        [
-         {"h3", [], ["Header 3"]},
-         {"p", [{"class", "bar"}], ["some data"]}
+         {<<"h3">>, [], [<<"Header 3">>]},
+         {<<"p">>, [{<<"class">>, <<"bar">>}], [<<"some data">>]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "div:has(p.foo)", [
-      {"div", [],
+    assert_find(Html, <<"div:has(p.foo)">>, [
+      {<<"div">>, [],
        [
-         {"h1", [], ["Header"]},
-         {"p", [{"class", "foo"}], ["some data"]}
+         {<<"h1">>, [], [<<"Header">>]},
+         {<<"p">>, [{<<"class">>, <<"foo">>}], [<<"some data">>]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "div:has(img[src='https://example.com'])", [
-      {"div", [],
+    assert_find(Html, <<"div:has(img[src='https://example.com'])">>, [
+      {<<"div">>, [],
        [
-         {"h2", [], ["Header 2"]},
-         {"img", [{"src", "https://example.com"}], []}
+         {<<"h2">>, [], [<<"Header 2">>]},
+         {<<"img">>, [{<<"src">>, <<"https://example.com">>}], []}
        ]}
-    ])
+    ]),
 
-    checked_value =
-      case @current_parser do
-        Mochiweb -> "checked"
-        _ -> ""
-      end
+    CheckedValue =
+      case ?current_parser of
+        mochiweb -> <<"checked">>;
+        _ -> <<"">>
+      end,
 
-    assert_find(html, "div:has(:checked)", [
-      {"div", [],
+    assert_find(Html, <<"div:has(:checked)">>, [
+      {<<"div">>, [],
        [
-         {"img", [{"src", "picture.jpg"}], []},
-         {"input", [{"type", "checkbox"}, {"checked", checked_value}], []}
+         {<<"img">>, [{<<"src">>, <<"picture.jpg">>}], []},
+         {<<"input">>, [{<<"type">>, <<"checkbox">>}, {<<"checked">>, CheckedValue}], []}
        ]}
-    ])
-  end
+    ]).
 
-  test "has pseudo-class with multiple selectors" do
-    html =
-      """
+has_pseudo_class_with_multiple_selectors_test() ->
+    RawHtml =
+      <<"
       <div>
         <h1>Header</h1>
         <p>some data</p>
       </div>
       <div>
         <h2>Header 2</h2>
-        <img src="https://example.com"></img>
+        <img src=\"https://example.com\"></img>
         <p>some data</p>
       </div>
-      """
-      |> String.replace(~r/\n|\s{2,}/, "")
-      |> html_body()
-      |> document!()
+      ">>,
+      Replace = re:replace(RawHtml, "\\n|\\s{2,}", "", [global, {return, binary}]),
+      HtmlBody = html_body(Replace),
+      Html = document(HtmlBody),
 
-    assert_find(html, "div:has(h1):has(h2)", [])
+    assert_find(Html, <<"div:has(h1):has(h2)">>, []),
 
-    assert_find(html, "div:has(h1, h2)", [
-      {"div", [],
+    assert_find(Html, <<"div:has(h1, h2)">>, [
+      {<<"div">>, [],
        [
-         {"h1", [], ["Header"]},
-         {"p", [], ["some data"]}
+         {<<"h1">>, [], [<<"Header">>]},
+         {<<"p">>, [], [<<"some data">>]}
        ]},
-      {"div", [],
+      {<<"div">>, [],
        [
-         {"h2", [], ["Header 2"]},
-         {"img", [{"src", "https://example.com"}], []},
-         {"p", [], ["some data"]}
+         {<<"h2">>, [], [<<"Header 2">>]},
+         {<<"img">>, [{<<"src">>, <<"https://example.com">>}], []},
+         {<<"p">>, [], [<<"some data">>]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "div:has(h2):has(img):has(p)", [
-      {"div", [],
+    assert_find(Html, <<"div:has(h2):has(img):has(p)">>, [
+      {<<"div">>, [],
        [
-         {"h2", [], ["Header 2"]},
-         {"img", [{"src", "https://example.com"}], []},
-         {"p", [], ["some data"]}
+         {<<"h2">>, [], [<<"Header 2">>]},
+         {<<"img">>, [{<<"src">>, <<"https://example.com">>}], []},
+         {<<"p">>, [], [<<"some data">>]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "div:has(h2, img, p)", [
-      {"div", [],
+    assert_find(Html, <<"div:has(h2, img, p)">>, [
+      {<<"div">>, [],
        [
-         {"h1", [], ["Header"]},
-         {"p", [], ["some data"]}
+         {<<"h1">>, [], [<<"Header">>]},
+         {<<"p">>, [], [<<"some data">>]}
        ]},
-      {"div", [],
+      {<<"div">>, [],
        [
-         {"h2", [], ["Header 2"]},
-         {"img", [{"src", "https://example.com"}], []},
-         {"p", [], ["some data"]}
+         {<<"h2">>, [], [<<"Header 2">>]},
+         {<<"img">>, [{<<"src">>, <<"https://example.com">>}], []},
+         {<<"p">>, [], [<<"some data">>]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "div:has(h1):has(p)", [
-      {"div", [],
+    assert_find(Html, <<"div:has(h1):has(p)">>, [
+      {<<"div">>, [],
        [
-         {"h1", [], ["Header"]},
-         {"p", [], ["some data"]}
+         {<<"h1">>, [], [<<"Header">>]},
+         {<<"p">>, [], [<<"some data">>]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "div:has(p):has(h1)", [
-      {"div", [],
+    assert_find(Html, <<"div:has(p):has(h1)">>, [
+      {<<"div">>, [],
        [
-         {"h1", [], ["Header"]},
-         {"p", [], ["some data"]}
+         {<<"h1">>, [], [<<"Header">>]},
+         {<<"p">>, [], [<<"some data">>]}
        ]}
-    ])
-  end
+    ]).
 
-  test "has pseudo-class with table" do
-    html =
-      """
+has_pseudo_class_with_table_test() ->
+    RawHtml =
+      <<"
       <table>
         <tbody>
           <tr>
@@ -1644,7 +1630,7 @@ not_pseudo_class_test() ->
             <td>some data</td>
           </tr>
           <tr>
-            <th class="empty">No Label</th>
+            <th class=\"empty\">No Label</th>
             <td>some data</td>
           </tr>
           <tr>
@@ -1658,129 +1644,128 @@ not_pseudo_class_test() ->
           </tr>
         </tbody>
       </table>
-      """
-      |> String.replace(~r/\n|\s{2,}/, "")
-      |> html_body()
-      |> document!()
+      ">>,
+      Replace = re:replace(RawHtml, "\\n|\\s{2,}", "", [global, {return, binary}]),
+      HtmlBody = html_body(Replace),
+      Html = document(HtmlBody),
 
-    assert_find(html, "tr:has(label)", [
-      {"tr", [],
+    assert_find(Html, <<"tr:has(label)">>, [
+      {<<"tr">>, [],
        [
-         {"th", [], [{"label", [], ["TEST"]}]},
-         {"td", [], ["fetch me pls"]},
-         {"td", [], [{"div", [], ["ok"]}]}
+         {<<"th">>, [], [{<<"label">>, [], [<<"TEST">>]}]},
+         {<<"td">>, [], [<<"fetch me pls">>]},
+         {<<"td">>, [], [{<<"div">>, [], [<<"ok">>]}]}
        ]},
-      {"tr", [],
+      {<<"tr">>, [],
        [
-         {"th", [], [{"div", [], [{"label", [], ["NESTED"]}]}]},
-         {"td", [], [{"div", [], ["fetch me pls"]}]}
+         {<<"th">>, [], [{<<"div">>, [], [{<<"label">>, [], [<<"NESTED">>]}]}]},
+         {<<"td">>, [], [{<<"div">>, [], [<<"fetch me pls">>]}]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "tr:has(th.empty)", [
-      {"tr", [],
+    assert_find(Html, <<"tr:has(th.empty)">>, [
+      {<<"tr">>, [],
        [
-         {"th", [{"class", "empty"}], ["No Label"]},
-         {"td", [], ["some data"]}
+         {<<"th">>, [{<<"class">>, <<"empty">>}], [<<"No Label">>]},
+         {<<"td">>, [], [<<"some data">>]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "tr:has(h1, label)", [
-      {"tr", [],
+    assert_find(Html, <<"tr:has(h1, label)">>, [
+      {<<"tr">>, [],
        [
-         {"td", [], [{"h1", [], ["Header"]}]},
-         {"td", [], ["some data"]}
+         {<<"td">>, [], [{<<"h1">>, [], [<<"Header">>]}]},
+         {<<"td">>, [], [<<"some data">>]}
        ]},
-      {"tr", [],
+      {<<"tr">>, [],
        [
-         {"th", [], [{"label", [], ["TEST"]}]},
-         {"td", [], ["fetch me pls"]},
-         {"td", [], [{"div", [], ["ok"]}]}
+         {<<"th">>, [], [{<<"label">>, [], [<<"TEST">>]}]},
+         {<<"td">>, [], [<<"fetch me pls">>]},
+         {<<"td">>, [], [{<<"div">>, [], [<<"ok">>]}]}
        ]},
-      {"tr", [],
+      {<<"tr">>, [],
        [
-         {"th", [], [{"div", [], [{"label", [], ["NESTED"]}]}]},
-         {"td", [], [{"div", [], ["fetch me pls"]}]}
+         {<<"th">>, [], [{<<"div">>, [], [{<<"label">>, [], [<<"NESTED">>]}]}]},
+         {<<"td">>, [], [{<<"div">>, [], [<<"fetch me pls">>]}]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "tr:has(label):has(div)", [
-      {"tr", [],
+    assert_find(Html, <<"tr:has(label):has(div)">>, [
+      {<<"tr">>, [],
        [
-         {"th", [], [{"label", [], ["TEST"]}]},
-         {"td", [], ["fetch me pls"]},
-         {"td", [], [{"div", [], ["ok"]}]}
+         {<<"th">>, [], [{<<"label">>, [], [<<"TEST">>]}]},
+         {<<"td">>, [], [<<"fetch me pls">>]},
+         {<<"td">>, [], [{<<"div">>, [], [<<"ok">>]}]}
        ]},
-      {"tr", [],
+      {<<"tr">>, [],
        [
-         {"th", [], [{"div", [], [{"label", [], ["NESTED"]}]}]},
-         {"td", [], [{"div", [], ["fetch me pls"]}]}
+         {<<"th">>, [], [{<<"div">>, [], [{<<"label">>, [], [<<"NESTED">>]}]}]},
+         {<<"td">>, [], [{<<"div">>, [], [<<"fetch me pls">>]}]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "tr:has(*:fl-contains('TEST'))", [
-      {"tr", [],
+    assert_find(Html, <<"tr:has(*:fl-contains('TEST'))">>, [
+      {<<"tr">>, [],
        [
-         {"th", [], [{"label", [], ["TEST"]}]},
-         {"td", [], ["fetch me pls"]},
-         {"td", [], [{"div", [], ["ok"]}]}
+         {<<"th">>, [], [{<<"label">>, [], [<<"TEST">>]}]},
+         {<<"td">>, [], [<<"fetch me pls">>]},
+         {<<"td">>, [], [{<<"div">>, [], [<<"ok">>]}]}
        ]}
-    ])
+    ]),
 
-    assert_find(html, "tr:has(*:fl-contains('TEST')) th ~ td", [
-      {"td", [], ["fetch me pls"]},
-      {"td", [], [{"div", [], ["ok"]}]}
-    ])
+    assert_find(Html, <<"tr:has(*:fl-contains('TEST')) th ~ td">>, [
+      {<<"td">>, [], [<<"fetch me pls">>]},
+      {<<"td">>, [], [{<<"div">>, [], [<<"ok">>]}]}
+    ]).
 
-    ## NOTE: this parses incorrectly, parses as:
-    ##   %PseudoClass{name: "has", value: [%Selector{type: "label", pseudo_classes: [%PseudoClass{name: "has", value: []}]}]}
-    ## but would expect to parse as:
-    ##   %PseudoClass{name: "has", value: [%Selector{type: "div", pseudo_classes: [%PseudoClass{name: "has", value: [%Selector{type: "label"}]}]}]}
-    # assert_find(html, "tr:has(div:has(label))", [
-    #   {"tr", [],
-    #    [
-    #      {"th", [], [{"div", [], [{"label", [], ["NESTED"]}]}]},
-    #      {"td", [], [{"div", [], ["fetch me pls"]}]}
-    #    ]}
-    # ])
+    %% NOTE: this parses incorrectly, parses as:
+    %%   %PseudoClass{name: "has", value: [%Selector{type: "label", pseudo_classes: [%PseudoClass{name: "has", value: []}]}]}
+    %% but would expect to parse as:
+    %%   %PseudoClass{name: "has", value: [%Selector{type: "div", pseudo_classes: [%PseudoClass{name: "has", value: [%Selector{type: "label"}]}]}]}
+    % assert_find(html, "tr:has(div:has(label))", [
+    %   {"tr", [],
+    %    [
+    %      {"th", [], [{"div", [], [{"label", [], ["NESTED"]}]}]},
+    %      {"td", [], [{"div", [], ["fetch me pls"]}]}
+    %    ]}
+    % ])
 
-    ## NOTE: this does not parse, because "only simple selectors are allowed in :has() pseudo-class"
-    # assert_find(html, "th:has(> label)", [
-    #   {"th", [], [{"label", [], ["TEST"]}]}
-    # ])
+    %% NOTE: this does not parse, because "only simple selectors are allowed in :has() pseudo-class"
+    % assert_find(html, "th:has(> label)", [
+    %   {"th", [], [{"label", [], ["TEST"]}]}
+    % ])
 
-    ## NOTE: this does not parse, because "only simple selectors are allowed in :has() pseudo-class"
-    # assert_find(html, "th:has(> div > label)", [
-    #   {"th", [], [{"div", [], [{"label", [], ["NESTED"]}]}]}
-    # ])
+    %% NOTE: this does not parse, because "only simple selectors are allowed in :has() pseudo-class"
+    % assert_find(html, "th:has(> div > label)", [
+    %   {"th", [], [{"div", [], [{"label", [], ["NESTED"]}]}]}
+    % ])
 
-    ## NOTE: this parses incorrectly, because "only simple selectors are allowed in :has() pseudo-class"
-    # assert_find(html, "tr:has(td + td)", [
-    #   {"tr", [],
-    #    [
-    #      {"td", [], [{"h1", [], ["Header"]}]},
-    #      {"td", [], ["some data"]}
-    #    ]},
-    #   {"tr", [],
-    #    [
-    #      {"th", [], [{"label", [], ["TEST"]}]},
-    #      {"td", [], ["fetch me pls"]},
-    #      {"td", [], [{"div", [], ["ok"]}]}
-    #    ]}
-    # ])
+    %% NOTE: this parses incorrectly, because "only simple selectors are allowed in :has() pseudo-class"
+    % assert_find(html, "tr:has(td + td)", [
+    %   {"tr", [],
+    %    [
+    %      {"td", [], [{"h1", [], ["Header"]}]},
+    %      {"td", [], ["some data"]}
+    %    ]},
+    %   {"tr", [],
+    %    [
+    %      {"th", [], [{"label", [], ["TEST"]}]},
+    %      {"td", [], ["fetch me pls"]},
+    %      {"td", [], [{"div", [], ["ok"]}]}
+    %    ]}
+    % ])
 
-    ## NOTE: this parses incorrectly, parses as:
-    ##  %PseudoClass{name: "not", value: [%Selector{type: "label", pseudo_classes: [%PseudoClass{name: "has", value: []}]}]}
-    ## but would expect to parse as:
-    ##  %PseudoClass{name: "not", value: [%Selector{type: "*", pseudo_classes: [%PseudoClass{name: "has", value: [%Selector{type: "label"}]}]}]}
-    # assert_find(html, "tr:not(:has(label))", [
-    #   {"tr", [], [{"th", [], ["No Label"]}, {"td", [], ["some data"]}]}
-    # ])
-  end
+    %% NOTE: this parses incorrectly, parses as:
+    %%  %PseudoClass{name: "not", value: [%Selector{type: "label", pseudo_classes: [%PseudoClass{name: "has", value: []}]}]}
+    %% but would expect to parse as:
+    %%  %PseudoClass{name: "not", value: [%Selector{type: "*", pseudo_classes: [%PseudoClass{name: "has", value: [%Selector{type: "label"}]}]}]}
+    % assert_find(html, "tr:not(:has(label))", [
+    %   {"tr", [], [{"th", [], ["No Label"]}, {"td", [], ["some data"]}]}
+    % ])
 
-  test "has pseudo-class edge-cases" do
-    html =
-      """
+has_pseudo_class_edge_cases_test() ->
+    RawHtml =
+      <<"
       <div>
         <div>
           <div>foo</div>
@@ -1788,574 +1773,530 @@ not_pseudo_class_test() ->
         </div>
         <div>baz</div>
       </div>
-      """
-      |> String.replace(~r/\n|\s{2,}/, "")
-      |> html_body()
-      |> document!()
+      ">>,
+      Replace = re:replace(RawHtml, "\\n|\\s{2,}", "", [global, {return, binary}]),
+      HtmlBody = html_body(Replace),
+      Html = document(HtmlBody),
 
-    # `:has` without any selector doesn't match any nodes (Enum.any? on an empty array returns false).
-    # Firefox ignores this case, warning of a bad selector due to a dangling combinator.
-    assert_find(html, "div:has()", [])
+    % `:has` without any selector doesn't match any nodes (Enum.any? on an empty array returns false).
+    % Firefox ignores this case, warning of a bad selector due to a dangling combinator.
+    assert_find(Html, <<"div:has()">>, []),
 
-    # `:has` with * as the selector matches all HTML nodes with HTML nodes as children.
-    # This matches the behaviour of `:has(*)` in Firefox.
-    assert_find(html, "div:has(*)", [
-      {"div", [],
+    % `:has` with * as the selector matches all HTML nodes with HTML nodes as children.
+    % This matches the behaviour of `:has(*)` in Firefox.
+    assert_find(Html, <<"div:has(*)">>, [
+      {<<"div">>, [],
        [
-         {"div", [], [{"div", [], ["foo"]}, {"div", [], ["bar"]}]},
-         {"div", [], ["baz"]}
+         {<<"div">>, [], [{<<"div">>, [], [<<"foo">>]}, {<<"div">>, [], [<<"bar">>]}]},
+         {<<"div">>, [], [<<"baz">>]}
        ]},
-      {"div", [], [{"div", [], ["foo"]}, {"div", [], ["bar"]}]}
-    ])
+      {<<"div">>, [], [{<<"div">>, [], [<<"foo">>]}, {<<"div">>, [], [<<"bar">>]}]}
+    ]),
 
-    # In this case, both the top-level div and the second-level div match the selector.
-    assert_find(html, "div:has(div:fl-contains('foo'))", [
-      {"div", [],
+    % In this case, both the top-level div and the second-level div match the selector.
+    assert_find(Html, <<"div:has(div:fl-contains('foo'))">>, [
+      {<<"div">>, [],
        [
-         {"div", [],
+         {<<"div">>, [],
           [
-            {"div", [], ["foo"]},
-            {"div", [], ["bar"]}
+            {<<"div">>, [], [<<"foo">>]},
+            {<<"div">>, [], [<<"bar">>]}
           ]},
-         {"div", [], ["baz"]}
+         {<<"div">>, [], [<<"baz">>]}
        ]},
-      {"div", [],
+      {<<"div">>, [],
        [
-         {"div", [], ["foo"]},
-         {"div", [], ["bar"]}
+         {<<"div">>, [], [<<"foo">>]},
+         {<<"div">>, [], [<<"bar">>]}
        ]}
-    ])
-  end
+    ]).
 
-  # Floki.find/2 - XML and invalid HTML
+% Floki.find/2 - XML and invalid HTML
 
-  test "get elements inside a XML structure" do
-    xml = [
-      {:pi, "xml", [{"version", "1.0"}, {"encoding", "UTF-8"}]},
-      {"rss", [{"version", "2.0"}],
+get_elements_inside_a_xml_structure_test() ->
+    Xml = [
+      {pi, <<"xml">>, [{<<"version">>, <<"1.0">>}, {<<"encoding">>, <<"UTF-8">>}]},
+      {<<"rss">>, [{<<"version">>, <<"2.0">>}],
        [
-         {"channel", [], [{"title", [], ["A podcast"]}, {"link", [], ["www.foo.bar.com"]}]},
-         {"channel", [], [{"title", [], ["Another podcast"]}, {"link", [], ["www.baz.com"]}]}
+         {<<"channel">>, [], [{<<"title">>, [], [<<"A podcast">>]}, {<<"link">>, [], [<<"www.foo.bar.com">>]}]},
+         {<<"channel">>, [], [{<<"title">>, [], [<<"Another podcast">>]}, {<<"link">>, [], [<<"www.baz.com">>]}]}
        ]}
-    ]
+    ],
 
-    assert_find(xml, "title", [
-      {"title", [], ["A podcast"]},
-      {"title", [], ["Another podcast"]}
-    ])
-  end
+    assert_find(Xml, <<"title">>, [
+      {<<"title">>, [], [<<"A podcast">>]},
+      {<<"title">>, [], [<<"Another podcast">>]}
+    ]).
 
-  test "find elements inside namespaces" do
-    {:ok, xml} = Floki.parse_fragment("<x:foo><x:bar>42</x:bar></x:foo>")
+find_elements_inside_namespaces_test() ->
+    {ok, Xml} = floki:parse_fragment(<<"<x:foo><x:bar>42</x:bar></x:foo>">>),
+    assert_find(Xml, <<"x | bar">>, [{<<"x:bar">>, [], [<<"42">>]}]).
 
-    assert_find(xml, "x | bar", [{"x:bar", [], ["42"]}])
-  end
+find_an_inexistent_element_inside_a_invalid_html_test() ->
+    {ok, Doc} = floki:parse_fragment(<<"foobar<a">>),
+    assert_find(Doc, <<"a">>, []).
 
-  @tag timeout: 100
-  test "find an inexistent element inside a invalid HTML" do
-    {:ok, doc} = Floki.parse_fragment("foobar<a")
+% Floki.find/2 - Raw selector structs
 
-    assert_find(doc, "a", [])
-  end
+find_single_selector_structs_test() ->
+    Html = document(?html),
+    HtmlTree = html_tree:build(Html),
 
-  # Floki.find/2 - Raw selector structs
+    SelectorStruct = #selector{type = <<"a">>},
 
-  test "find single selector structs" do
-    html = document!(@html)
-    html_tree = HTMLTree.build(html)
+    ?assertEqual(floki:find(Html, <<"a">>), floki:find(Html, SelectorStruct)),
+    ?assertEqual(finder:find(HtmlTree, <<"a">>), finder:find(HtmlTree, SelectorStruct)).
 
-    selector_struct = %Floki.Selector{type: "a"}
+find_multiple_selector_structs_test() ->
+    Html = document(?html),
+    HtmlTree = html_tree:build(Html),
 
-    assert Floki.find(html, "a") == Floki.find(html, selector_struct)
-    assert Floki.Finder.find(html_tree, "a") == Floki.Finder.find(html_tree, selector_struct)
-  end
+    SelectorStruct1 = #selector{type = <<"a">>},
+    SelectorStruct2 = #selector{type = <<"div">>},
 
-  test "find multiple selector structs" do
-    html = document!(@html)
-    html_tree = HTMLTree.build(html)
+    ?assertEqual(floki:find(Html, <<"a,div">>), floki:find(Html, [SelectorStruct1, SelectorStruct2])),
 
-    selector_struct_1 = %Floki.Selector{type: "a"}
-    selector_struct_2 = %Floki.Selector{type: "div"}
+    ?assertEqual(finder:find(HtmlTree, <<"a,div">>),
+             finder:find(HtmlTree, [SelectorStruct1, SelectorStruct2])).
 
-    assert Floki.find(html, "a,div") == Floki.find(html, [selector_struct_1, selector_struct_2])
+% Floki.find/2 - Empty case
 
-    assert Floki.Finder.find(html_tree, "a,div") ==
-             Floki.Finder.find(html_tree, [selector_struct_1, selector_struct_2])
-  end
+find_with_an_empty_selector_test() ->
+    Html = document(?html),
+    ?assertEqual(floki:find(Html, <<>>), []).
 
-  # Floki.find/2 - Empty case
+% Floki.get_by_id/2
 
-  test "find with an empty selector" do
-    html = document!(@html)
-    assert Floki.find(html, "") == []
-  end
+get_by_id_finds_element_with_special_characters_test() ->
+    Html =
+      document(
+        html_body(<<"
+        <div id=\"my-id?with_special!char:acters\">Hello</div>
+        ">>)
+      ),
 
-  # Floki.get_by_id/2
+    ?assert({<<"div">>, [{<<"id">>, <<"my-id?with_special!char:acters">>}], [<<"Hello">>]} =
+             floki:get_by_id(Html, <<"my-id?with_special!char:acters">>)),
 
-  test "get_by_id finds element with special characters" do
-    html =
-      document!(
-        html_body(~s"""
-        <div id="my-id?with_special!char:acters">Hello</div>
-        """)
-      )
+    ?assertEqual(floki:get_by_id(Html, <<"doesn't exist">>), false).
 
-    assert {"div", [{"id", "my-id?with_special!char:acters"}], ["Hello"]} =
-             Floki.get_by_id(html, "my-id?with_special!char:acters")
+% Floki.children/2
 
-    refute Floki.get_by_id(html, "doesn't exist")
-  end
+returns_the_children_elements_of_an_element_including_the_text_test() ->
+    HtmlNode = {<<"div">>, [], [<<"a parent">>, {<<"span">>, [], [<<"a child">>]}]},
 
-  # Floki.children/2
+    Expected = [
+      <<"a parent">>,
+      {<<"span">>, [], [<<"a child">>]}
+    ],
 
-  test "returns the children elements of an element including the text" do
-    html_node = {"div", [], ["a parent", {"span", [], ["a child"]}]}
+    ?assertEqual(floki:children(HtmlNode), Expected),
+    ?assertEqual(floki:children(HtmlNode, [{include_text, true}]), Expected).
 
-    expected = [
-      "a parent",
-      {"span", [], ["a child"]}
-    ]
+%    assert_raise ArgumentError, fn ->
+%      Floki.children(html_node, include_text: true, unknown_option: true)
+%    end
+%
+%    assert_raise ArgumentError, fn ->
+%      Floki.children(html_node, unknown_option: true)
+%    end
 
-    assert Floki.children(html_node) == expected
-    assert Floki.children(html_node, include_text: true) == expected
+returns_the_children_elements_of_an_element_without_the_text_test() ->
+    Html =
+      document(html_body(<<"<div>a parent<span>child 1</span>some text<span>child 2</span></div>">>)),
 
-    assert_raise ArgumentError, fn ->
-      Floki.children(html_node, include_text: true, unknown_option: true)
-    end
+    [Elements | _] = floki:find(Html, <<"body > div">>),
 
-    assert_raise ArgumentError, fn ->
-      Floki.children(html_node, unknown_option: true)
-    end
-  end
+    Expected = [
+      {<<"span">>, [], [<<"child 1">>]},
+      {<<"span">>, [], [<<"child 2">>]}
+    ],
 
-  test "returns the children elements of an element without the text" do
-    html =
-      document!(html_body("<div>a parent<span>child 1</span>some text<span>child 2</span></div>"))
+    ?assertEqual(floki:children(Elements, [{include_text, false}]), Expected).
 
-    [elements | _] = Floki.find(html, "body > div")
+%%    assert_raise ArgumentError, fn ->
+%%      Floki.children(elements, include_text: false, unknown_option: true)
+%%    end
 
-    expected = [
-      {"span", [], ["child 1"]},
-      {"span", [], ["child 2"]}
-    ]
+returns_nil_if_the_given_html_is_not_a_valid_tuple_test() ->
+    ?assertEqual(floki:children([]), undefined),
+    ?assertEqual(floki:children([], [{include_text, true}]), undefined),
+    ?assertEqual(floki:children([], [{include_text, false}]), undefined).
 
-    assert Floki.children(elements, include_text: false) == expected
+  % Floki.attribute/3
 
-    assert_raise ArgumentError, fn ->
-      Floki.children(elements, include_text: false, unknown_option: true)
-    end
-  end
+get_attribute_values_from_elements_with_a_given_class_test() ->
+    ClassSelector = <<".js-cool">>,
+    ExpectedHrefs = [<<"http://google.com">>, <<"http://elixir-lang.org">>],
 
-  test "returns nil if the given html is not a valid tuple" do
-    assert Floki.children([]) == nil
-    assert Floki.children([], include_text: true) == nil
-    assert Floki.children([], include_text: false) == nil
-  end
+    ?assertEqual(floki:attribute(document(?html), ClassSelector, <<"href">>), ExpectedHrefs).
 
-  # Floki.attribute/3
+get_attributes_from_elements_test() ->
+    ClassSelector = <<".js-cool">>,
+    ExpectedHrefs = [<<"http://google.com">>, <<"http://elixir-lang.org">>],
+    Elements = floki:find(document(?html), ClassSelector),
 
-  test "get attribute values from elements with a given class" do
-    class_selector = ".js-cool"
-    expected_hrefs = ["http://google.com", "http://elixir-lang.org"]
+    ?assertEqual(floki:attribute(Elements, "href"), ExpectedHrefs).
 
-    assert Floki.attribute(document!(@html), class_selector, "href") == expected_hrefs
-  end
+  % Floki.attribute/2
 
-  test "get attributes from elements" do
-    class_selector = ".js-cool"
-    expected_hrefs = ["http://google.com", "http://elixir-lang.org"]
-    elements = Floki.find(document!(@html), class_selector)
+get_attributes_from_an_element_found_by_id_test() ->
+    Html = document(html_body(<<"<div id=important-el></div>">>)),
+    Elements = floki:find(Html, "#important-el"),
 
-    assert Floki.attribute(elements, "href") == expected_hrefs
-  end
+    ?assertEqual(floki:attribute(Elements, <<"id">>), [<<"important-el">>]).
 
-  # Floki.attribute/2
+returns_an_empty_list_when_attribute_does_not_exist_test() ->
+    ClassSelector = <<".js-cool">>,
+    Elements = floki:find(document(?html), ClassSelector),
 
-  test "get attributes from an element found by id" do
-    html = document!(html_body("<div id=important-el></div>"))
+    ?assertEqual(floki:attribute(Elements, <<"title">>),  []).
 
-    elements = Floki.find(html, "#important-el")
+ % find_and_update/3
+transforms_attributes_from_selected_nodes_test() ->
+      Transformation = fun
+        ({<<"a">>, [{<<"href">>, Href} | Attrs]}) ->
+          {<<"a">>, [{<<"href">>, binary:replace(Href, [<<"http://">>], <<"https://">>)} | Attrs]};
 
-    assert Floki.attribute(elements, "id") == ["important-el"]
-  end
+        (Other) -> Other
+      end,
 
-  test "returns an empty list when attribute does not exist" do
-    class_selector = ".js-cool"
-    elements = Floki.find(document!(@html), class_selector)
+      RawChunk = <<"<div class=\"content\"><a href=\"http://elixir-lang.org\">Elixir</a><a href=\"http://github.com\">GitHub</a></div>">>,
+      HtmlBody = html_body(RawChunk),
+      HtmlTree = document(HtmlBody),
 
-    assert Floki.attribute(elements, "title") == []
-  end
+      Result = floki:find_and_update(HtmlTree, <<".content a">>, Transformation),
 
-  describe "find_and_update/3" do
-    test "transforms attributes from selected nodes" do
-      transformation = fn
-        {"a", [{"href", href} | attrs]} ->
-          {"a", [{"href", String.replace(href, "http://", "https://")} | attrs]}
-
-        other ->
-          other
-      end
-
-      html_tree =
-        ~s(<div class="content"><a href="http://elixir-lang.org">Elixir</a><a href="http://github.com">GitHub</a></div>)
-        |> html_body()
-        |> document!()
-
-      result = Floki.find_and_update(html_tree, ".content a", transformation)
-
-      assert result == [
-               {"html", [],
+      ?assertEqual(Result, [
+               {<<"html">>, [],
                 [
-                  {"head", [], []},
-                  {"body", [],
+                  {<<"head">>, [], []},
+                  {<<"body">>, [],
                    [
-                     {"div", [{"class", "content"}],
+                     {<<"div">>, [{<<"class">>, <<"content">>}],
                       [
-                        {"a", [{"href", "https://elixir-lang.org"}], ["Elixir"]},
-                        {"a", [{"href", "https://github.com"}], ["GitHub"]}
+                        {<<"a">>, [{<<"href">>, <<"https://elixir-lang.org">>}], [<<"Elixir">>]},
+                        {<<"a">>, [{<<"href">>, <<"https://github.com">>}], [<<"GitHub">>]}
                       ]}
                    ]}
                 ]}
-             ]
-    end
+             ]).
 
-    test "changes the type of a given tag" do
-      html =
-        ~s(<div><span class="strong">Hello</span><span>world</span></div>)
-        |> html_body()
-        |> document!()
+changes_the_type_of_a_given_tag_test() ->
+    HtmlChunk = <<"<div><span class=\"strong\">Hello</span><span>world</span></div>">>,
+    HtmlBody = html_body(HtmlChunk),
+    Html = document(HtmlBody),
 
-      assert Floki.find_and_update(html, "span.strong", fn
-               {"span", attrs} -> {"strong", attrs}
-               other -> other
-             end) == [
-               {
-                 "html",
-                 [],
+    UpdateFun = fun({"span", Attrs}) -> {<<"strong">>, Attrs};
+               (Other) -> Other
+             end,
+    UpdateAndFind = floki:find_and_update(Html, <<"span.strong">>, UpdateFun),
+
+    Result = [
+              {
+               <<"html">>,
+               [],
+               [
+                {<<"head">>, [], []},
+                {<<"body">>, [],
                  [
-                   {"head", [], []},
-                   {"body", [],
-                    [
-                      {"div", [],
-                       [{"strong", [{"class", "strong"}], ["Hello"]}, {"span", [], ["world"]}]}
-                    ]}
-                 ]
-               }
-             ]
-    end
+                  {<<"div">>, [],
+                   [{<<"strong">>, [{<<"class">>, <<"strong">>}], [<<"Hello">>]}, {<<"span">>, [], [<<"world">>]}]}
+                 ]}
+               ]
+              }
+             ],
 
-    test "removes a node from HTML tree" do
-      html =
-        ~s(<div><span class="remove-me">Hello</span><span>world</span></div>)
-        |> html_body()
-        |> document!()
+      ?assertEqual(UpdateAndFind,  Result).
 
-      assert Floki.find_and_update(html, "span", fn
-               {"span", [{"class", "remove-me"}]} -> :delete
-               other -> other
-             end) == [
-               {
-                 "html",
-                 [],
-                 [
-                   {"head", [], []},
-                   {"body", [], [{"div", [], [{"span", [], ["world"]}]}]}
-                 ]
-               }
-             ]
-    end
-  end
+removes_a_node_from_HTML_tree_test() ->
+    RawChunk = <<"<div><span class=\"remove-me\">Hello</span><span>world</span></div>">>,
+    HtmlBody = html_body(RawChunk),
+    Html = document(HtmlBody),
 
-  test "finding leaf nodes" do
-    html = """
+    UpdateFun = fun({<<"span">>, [{<<"class">>, <<"remove-me">>}]}) -> delete;
+                   (Other) -> Other
+                end,
+
+    FindAndUpdate = floki:find_and_update(Html, <<"span">>, UpdateFun),
+
+    Result = [
+              {
+               <<"html">>,
+               [],
+               [
+                {<<"head">>, [], []},
+                {<<"body">>, [], [{<<"div">>, [], [{<<"span">>, [], [<<"world">>]}]}]}
+               ]
+              }
+             ],
+
+    ?assertEqual(FindAndUpdate, Result).
+
+finding_leaf_nodes_test() ->
+    Html = <<"
     <html>
     <body>
-    <div id="messageBox" class="legacyErrors">
-      <div class="messageBox error">
-        <h2 class="accessAid">Error Message</h2>
+    <div id=\"messageBox\" class=\"legacyErrors\">
+      <div class=\"messageBox error\">
+        <h2 class=\"accessAid\">Error Message</h2>
         <p>There has been an error in your account.</p>
       </div>
     </div>
-    <div id="main" class="legacyErrors"><p>Separate Error Message</p></div>
+    <div id=\"main\" class=\"legacyErrors\"><p>Separate Error Message</p></div>
     </body>
     </html>
-    """
+    ">>,
 
-    assert_find(document!(html), ".messageBox p", [
-      {"p", [], ["There has been an error in your account."]}
-    ])
-  end
+    assert_find(document(Html), <<".messageBox p">>, [
+      {<<"p">>, [], [<<"There has been an error in your account.">>]}
+    ]).
 
-  test "descendant matches are returned in order and without duplicates" do
-    html =
-      document!("""
+descendant_matches_are_returned_in_order_and_without_duplicates_test() ->
+    Html =
+      document(<<"
       <!doctype html>
       <html>
         <body>
-          <div class="data-view">Foo</div>
-          <table summary="license-detail">
+          <div class=\"data-view\">Foo</div>
+          <table summary=\"license-detail\">
             <tbody>
               <tr>
                 <th>
                   <span>Name:</span>
                 </th>
-                <td class="data-view"><span class="surname">Silva</span>, <span>Joana</span><span>Maria</span></td>
+                <td class=\"data-view\"><span class=\"surname\">Silva</span>, <span>Joana</span><span>Maria</span></td>
               </tr>
               <tr>
-                <th scope="row">
+                <th scope=\"row\">
                   <span>License Type:</span>
                 </th>
-                <td class="data-view">Naturopathic Doctor</td>
+                <td class=\"data-view\">Naturopathic Doctor</td>
               </tr>
               <tr>
-                <th scope="row">
+                <th scope=\"row\">
                   <span>Expiration Date:</span>
                 </th>
-                <td class="data-view">06/30/2017</td>
+                <td class=\"data-view\">06/30/2017</td>
               </tr>
             </tbody>
           </table>
-          <div class="data-view">Bar</div>
+          <div class=\"data-view\">Bar</div>
         </body>
       </html>
-      """)
+      ">>),
 
-    expected = [
+    Expected = [
       {
-        "td",
-        [{"class", "data-view"}],
+        <<"td">>,
+        [{<<"class">>, <<"data-view">>}],
         [
-          {"span", [{"class", "surname"}], ["Silva"]},
-          ", ",
-          {"span", [], ["Joana"]},
-          {"span", [], ["Maria"]}
+          {<<"span">>, [{<<"class">>, <<"surname">>}], [<<"Silva">>]},
+          <<", ">>,
+          {<<"span">>, [], [<<"Joana">>]},
+          {<<"span">>, [], [<<"Maria">>]}
         ]
       },
-      {"td", [{"class", "data-view"}], ["Naturopathic Doctor"]},
-      {"td", [{"class", "data-view"}], ["06/30/2017"]}
-    ]
+      {<<"td">>, [{<<"class">>, <<"data-view">>}], [<<"Naturopathic Doctor">>]},
+      {<<"td">>, [{<<"class">>, <<"data-view">>}], [<<"06/30/2017">>]}
+    ],
 
-    assert_find(html, "table[summary='license-detail'] td.data-view", expected)
-  end
+    assert_find(Html, <<"table[summary='license-detail'] td.data-view">>, Expected).
 
-  test "finding doesn't fail when body includes unencoded angles" do
-    html_with_wrong_angles_encoding =
-      document!(
-        html_body(~s(<span class="method-callseq">mark # => #<Psych::Parser::Mark></span>))
-      )
+finding_doesnt_fail_when_body_includes_unencoded_angles_test() ->
+    HtmlWithWrongAnglesEncoding =
+      document(
+        html_body(<<"<span class=\"method-callseq\">mark # => #<Psych::Parser::Mark></span>">>)
+      ),
 
-    assert_find(html_with_wrong_angles_encoding, "span", [
-      {"span", [{"class", "method-callseq"}], ["mark # => #", {"psych::parser::mark", [], []}]}
-    ])
-  end
+    assert_find(HtmlWithWrongAnglesEncoding, <<"span">>, [
+      {<<"span">>, [{<<"class">>, <<"method-callseq">>}], [<<"mark # => #">>, {<<"psych::parser::mark">>, [], []}]}
+    ]).
 
-  test "html with xml definition tag in it" do
-    html = """
+html_with_xml_definition_tag_in_it_test() ->
+    Html = <<"
       <!DOCTYPE html>
       <html>
       <head>
       </head>
       <body>
-        <div class="text">test</div>
-        <?xml version="1.0" encoding="utf-8"?>
+        <div class=\"text\">test</div>
+        <?xml version=\"1.0\" encoding=\"utf-8\"?>
       </div>
       </body>
       </html>
-    """
+    ">>,
 
-    assert_find(document!(html), ".text", [{"div", [{"class", "text"}], ["test"]}])
-  end
+    assert_find(document(Html), <<".text">>, [{<<"div">>, [{<<"class">>, <<"text">>}], [<<"test">>]}]).
 
-  test "finding doesn't fail when body includes xml version prefix" do
-    html_with_xml_prefix = """
-    <?xml version="1.0" encoding="UTF-8"?>
-    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-    <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+finding_doesnt_fail_when_body_includes_xml_version_prefix_test() ->
+    HtmlWithXmlPrefix = <<"
+    <?xml version=\"1.0\" encoding=\"UTF-8\"?>
+    <!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">
+    <html xmlns=\"http://www.w3.org/1999/xhtml\" xml:lang=\"en\" lang=\"en\">
     <head>
     </head>
     <body>
-      <a id="anchor" href="">useless link</a>
+      <a id=\"anchor\" href=\"\">useless link</a>
     </body>
     </html>
-    """
+    ">>,
 
-    {:ok, html} = Floki.parse_document(html_with_xml_prefix)
+    {ok, Html} = floki:parse_document(HtmlWithXmlPrefix),
 
-    assert_find(html, "#anchor", [{"a", [{"id", "anchor"}, {"href", ""}], ["useless link"]}])
-  end
+    assert_find(Html, <<"#anchor">>, [{<<"a">>, [{<<"id">>, <<"anchor">>}, {<<"href">>, <<"">>}], [<<"useless link">>]}]).
 
-  test "we can produce raw_html if it has an xml version prefix" do
-    html_tree = [
-      {:pi, "xml", [{"version", "1.0"}, {"encoding", "UTF-8"}]},
-      {"html",
+we_can_produce_raw_html_if_it_has_an_xml_version_prefix_test() ->
+    HtmlTree = [
+      {pi, <<"xml">>, [{<<"version">>, <<"1.0">>}, {<<"encoding">>, <<"UTF-8">>}]},
+      {<<"html">>,
        [
-         {"xmlns", "http://www.w3.org/1999/xhtml"},
-         {"xml:lang", "en"},
-         {"lang", "en"}
+         {<<"xmlns">>, <<"http://www.w3.org/1999/xhtml">>},
+         {<<"xml:lang">>, <<"en">>},
+         {<<"lang">>, <<"en">>}
        ],
        [
-         {"head", [], []},
-         {"body", [], [{"a", [{"id", "anchor"}, {"href", ""}], ["useless link"]}]}
+         {<<"head">>, [], []},
+         {<<"body">>, [], [{<<"a">>, [{<<"id">>, <<"anchor">>}, {<<"href">>, <<"">>}], [<<"useless link">>]}]}
        ]}
-    ]
+    ],
 
-    assert String.starts_with?(
-             Floki.raw_html(html_tree),
-             "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-           )
-  end
+    ?assert(<<"<?xml version=\"1.0\" encoding=\"UTF-8\"?>", _/binary>> = floki:raw_html(HtmlTree)).
 
-  test "change tag attributes" do
-    html =
-      document!(
+change_tag_attributes_test() ->
+    Html =
+      document(
         html_body(
-          Enum.join([
-            ~s(<a class="change" href=\"http://not.url/changethis/\">link</a>),
-            ~s(<a href=\"http://not.url/changethisbutnotrly/\">link</a>),
-            ~s(<a class="change" href=\"http://not.url/changethis/\">link</a>)
-          ])
+          binary:join([
+            <<"<a class=\"change\" href=\"http://not.url/changethis/\">link</a>">>,
+            <<"<a href=\"http://not.url/changethisbutnotrly/\">link</a>">>,
+            <<"<a class=\"change\" href=\"http://not.url/changethis/\">link</a>">>
+          ], <<>>)
         )
-      )
+      ),
 
-    expects =
+    Expects =
       html_body(
-        Enum.join([
-          ~s(<a class="change" href=\"http://not.url/changed/\">link</a>),
-          ~s(<a href=\"http://not.url/changethisbutnotrly/\">link</a>),
-          ~s(<a class="change" href=\"http://not.url/changed/\">link</a>)
-        ])
-      )
+        binary:join([
+          <<"<a class=\"change\" href=\"http://not.url/changed/\">link</a>">>,
+          <<"<a href=\"http://not.url/changethisbutnotrly/\">link</a>">>,
+          <<"<a class=\"change\" href=\"http://not.url/changed/\">link</a>">>
+        ], <<>>)
+      ),
 
-    result =
-      html
-      |> Floki.attr(".change", "href", fn inner_html ->
-        String.replace(inner_html, "changethis", "changed")
-      end)
-      |> Floki.raw_html()
+      AttrFun = fun(InnerHtml) ->
+        binary:replace(InnerHtml, [<<"changethis">>], <<"changed">>)
+      end,
 
-    assert result == IO.chardata_to_string(expects)
-  end
+      HtmlAttr = floki:attr(Html, <<".change">>, <<"href">>, AttrFun),
+      Result = floki:raw_html(HtmlAttr),
 
-  test "changing attribute don't change the order of nodes" do
-    html =
-      document!(
+    ?assertEqual(Result, iolist_to_binary(Expects)).
+
+changing_attribute_dont_change_the_order_of_nodes_test() ->
+    Html =
+      document(
         html_body(
-          ~s(<p>a<em>b</em>c<a href="z">d</a></p><p>e</p><p><a href="f"><strong>g</strong></a>.<em>h</em>i</p><p><strong>j</strong>k<a href="m">n</a>o</p><p><em>p</em>q<em>r</em>s<a href="t">u</a></p>)
+          <<"<p>a<em>b</em>c<a href=\"z\">d</a></p><p>e</p><p><a href=\"f\"><strong>g</strong></a>.<em>h</em>i</p><p><strong>j</strong>k<a href=\"m\">n</a>o</p><p><em>p</em>q<em>r</em>s<a href=\"t\">u</a></p>">>
         )
-      )
+      ),
 
-    result =
-      html
-      |> Floki.attr("a", "href", fn href -> href end)
-      |> hd()
+      HtmlAttr = floki:attr(Html, <<"a">>, <<"href">>, fun(Href) -> Href end),
+      Result = hd(HtmlAttr),
 
-    assert result == html
-  end
+    ?assertEqual(Result, Html).
 
-  describe "is_html_node/1 guard" do
-    test "returns true when html_tag is passed" do
-      assert Floki.is_html_node({"div", [], []})
-    end
+ % is_html_node/1 guard
+returns_true_when_html_tag_is_passed_test() ->
+    ?assert(floki:is_html_node({<<"div">>, [], []})).
 
-    test "returns true when html_comment is passed" do
-      assert Floki.is_html_node({:comment, "Ok"})
-    end
+returns_true_when_html_comment_is_passed_test() ->
+    ?assert(floki:is_html_node({comment, <<"Ok">>})).
 
-    test "returns true when html_doctype is passed" do
-      assert Floki.is_html_node({:doctype, "html", nil, nil})
-    end
+returns_true_when_html_doctype_is_passed_test() ->
+    ?assert(floki:is_html_node({doctype, <<"html">>, undefined, undefined})).
 
-    test "returns true when html_declaration is passed" do
-      assert Floki.is_html_node({:pi, "xml", [{"version", "1.0"}]})
-    end
+returns_true_when_html_declaration_is_passed_test() ->
+    ?assert(floki:is_html_node({pi, <<"xml">>, [{<<"version">>, <<"1.0">>}]})).
 
-    test "returns true when html_text is passed" do
-      assert Floki.is_html_node("I am html_text")
-    end
+returns_true_when_html_text_is_passed_test() ->
+    ?assert(floki:is_html_node(<<"I am html_text">>)).
 
-    test "returns false when {:ok, val} / {:error, reason} is supplied" do
-      refute Floki.is_html_node({:ok, 1})
-      refute Floki.is_html_node({:error, :reason})
-    end
-  end
+returns_false_when_ok_val_error_reason_is_supplied_test() ->
+      ?assertEqual(floki:is_html_node({ok, 1}), false),
+      ?assertEqual(floki:is_html_node({error, reason}), false).
 
-  @tag only_parser: Mochiweb
-  test "parse document with attributes as map option enabled" do
-    html =
-      html_body("""
-      <div class="container">
+parse_document_with_attributes_as_map_option_enabled_test() ->
+    Html =
+      html_body(<<"
+      <div class=\"container\">
         <ul>
-          <li class="link active"><a href="/">Home</a></li>
-          <li class="link"><a href="/about-us">About us</a></li>
+          <li class=\"link active\"><a href=\"/\">Home</a></li>
+          <li class=\"link\"><a href=\"/about-us\">About us</a></li>
         </ul>
       </div>
-      """)
+      ">>),
 
-    assert {:ok, html_tree} = Floki.parse_document(html, attributes_as_maps: true)
+    {ok, HtmlTree} = floki:parse_document(Html, [{attributes_as_maps, true}]),
 
-    assert html_tree == [
-             {"html", %{},
+    ?assertEqual(HtmlTree, [
+             {<<"html">>, #{},
               [
-                {"head", %{}, []},
-                {"body", %{},
+                {<<"head">>, #{}, []},
+                {<<"body">>, #{},
                  [
-                   {"div", %{"class" => "container"},
+                   {<<"div">>, #{<<"class">> => <<"container">>},
                     [
-                      {"ul", %{},
+                      {<<"ul">>, #{},
                        [
-                         {"li", %{"class" => "link active"}, [{"a", %{"href" => "/"}, ["Home"]}]},
-                         {"li", %{"class" => "link"},
-                          [{"a", %{"href" => "/about-us"}, ["About us"]}]}
+                         {<<"li">>, #{<<"class">> => <<"link active">>}, [{<<"a">>, #{<<"href">> => <<"/">>}, [<<"Home">>]}]},
+                         {<<"li">>, #{<<"class">> => <<"link">>},
+                          [{<<"a">>, #{<<"href">> => <<"/about-us">>}, [<<"About us">>]}]}
                        ]}
                     ]}
                  ]}
               ]}
-           ]
-  end
+           ]).
 
-  @tag only_parser: Mochiweb
-  test "parse document with attributes as map option enabled and duplicated attributes" do
-    html =
-      html_body("""
-      <div class="container">
+parse_document_with_attributes_as_map_option_enabled_and_duplicated_attributes_test() ->
+    Html =
+      html_body(<<"
+      <div class=\"container\">
         <ul>
-          <li class="link active"><a href="/">Home</a></li>
-          <li class="link" id="about-us" class="link company"><a href="/about-us">About us</a></li>
+          <li class=\"link active\"><a href=\"/\">Home</a></li>
+          <li class=\"link\" id=\"about-us\" class=\"link company\"><a href=\"/about-us\">About us</a></li>
         </ul>
       </div>
-      """)
+      ">>),
 
-    assert {:ok, html_tree} = Floki.parse_document(html, attributes_as_maps: true)
+    {ok, HtmlTree} = floki:parse_document(Html, [{attributes_as_maps, true}]),
 
-    # It takes the first attribute and ignores the second one.
-    assert html_tree == [
-             {"html", %{},
+    % It takes the first attribute and ignores the second one.
+    ?assertEqual(HtmlTree, [
+             {<<"html">>, #{},
               [
-                {"head", %{}, []},
-                {"body", %{},
+                {<<"head">>, #{}, []},
+                {<<"body">>, #{},
                  [
-                   {"div", %{"class" => "container"},
+                   {<<"div">>, #{<<"class">> => <<"container">>},
                     [
-                      {"ul", %{},
+                      {<<"ul">>, #{},
                        [
-                         {"li", %{"class" => "link active"}, [{"a", %{"href" => "/"}, ["Home"]}]},
-                         {"li", %{"class" => "link", "id" => "about-us"},
-                          [{"a", %{"href" => "/about-us"}, ["About us"]}]}
+                         {<<"li">>, #{<<"class">> => <<"link active">>}, [{<<"a">>, #{<<"href">> => <<"/">>}, [<<"Home">>]}]},
+                         {<<"li">>, #{<<"class">> => <<"link">>, <<"id">> => <<"about-us">>},
+                          [{<<"a">>, #{<<"href">> => <<"/about-us">>}, [<<"About us">>]}]}
                        ]}
                     ]}
                  ]}
               ]}
-           ]
-  end
+           ]).
 
-  @tag only_parser: Mochiweb
-  test "parse fragment containing malformed HTML with mochiweb" do
-    html = "<spanclass=\"trade\">™ curl gelée<br><br><br></spanclass=\"trade\">"
+parse_fragment_containing_malformed_HTML_with_mochiweb_test() ->
+    Html = <<"<spanclass=\"trade\">™ curl gelée<br><br><br></spanclass=\"trade\">">>,
 
-    tree = Floki.parse_fragment!(html)
+    {ok, Tree} = floki:parse_fragment(Html),
 
-    assert tree == [
-             {"spanclass", [{"=", "="}, {"\"trade\"", "\"trade\""}],
-              ["™ curl gelée", {"br", [], []}, {"br", [], []}, {"br", [], []}]}
-           ]
-  end
+    ?assertEqual(Tree, [
+             {<<"spanclass">>, [{<<"=">>, <<"=">>}, {<<"\"trade\"">>, <<"\"trade\"">>}],
+              [<<"™ curl gelée">>, {<<"br">>, [], []}, {<<"br">>, [], []}, {<<"br">>, [], []}]}
+           ]).
