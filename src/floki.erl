@@ -10,6 +10,10 @@
          get_by_id/2,
          find/2,
          text/1,
+         children/1,
+         children/2,
+         attribute/2,
+         attribute/3,
          traverse_and_update/2,
          traverse_and_update/3,
          validate/2,
@@ -425,6 +429,111 @@ clean_html_tree(HtmlTree, style, _) ->
 filter_out(Elements, Selector) ->
     filter_out:filter_out(Elements, Selector).
 
+-doc """
+  Returns the direct child nodes of a HTML node.
+
+  By default, it will also include all texts. You can disable
+  this behaviour by using the option `include_text` to `false`.
+
+  If the given node is not an HTML tag, then it returns nil.
+
+  ## Examples
+
+      iex> Floki.children({"div", [], ["text", {"span", [], []}]})
+      ["text", {"span", [], []}]
+
+      iex> Floki.children({"div", [], ["text", {"span", [], []}]}, include_text: false)
+      [{"span", [], []}]
+
+      iex> Floki.children({:comment, "comment"})
+      nil
+
+  """.
+
+-spec children(html_node(), list()) -> html_tree() | undefined.
+
+children(HtmlNode) ->
+    DefaultOpts = [{include_text, true}],
+    children(HtmlNode, DefaultOpts).
+
+children({_, _, Subtree}, [{include_text, false}]) ->
+    Pred = fun(Item) -> is_tuple(Item) end,
+    lists:filter(Pred, Subtree);
+
+children({_, _, Subtree}, [{include_text, _}]) ->
+    Subtree;
+
+children({_, _, _} = HtmlNode, Opts) ->
+    ValidOpts = validate(Opts, [{include_text, true}]),
+    IncludeText = proplists:get_value(include_text, ValidOpts),
+    children(HtmlNode, [{include_text, IncludeText}]);
+
+children(_html_node, _opts) -> undefined.
+
+-doc """
+  Returns a list with attribute values for a given selector.
+
+  ## Examples
+
+      iex> Floki.attribute([{"a", [{"href", "https://google.com"}], ["Google"]}], "a", "href")
+      ["https://google.com"]
+
+      iex> Floki.attribute(
+      iex>   [{"a", [{"class", "foo"}, {"href", "https://google.com"}], ["Google"]}],
+      iex>   "a",
+      iex>   "class"
+      iex> )
+      ["foo"]
+
+      iex> Floki.attribute(
+      iex>   [{"a", [{"href", "https://e.corp.com"}, {"data-name", "e.corp"}], ["E.Corp"]}],
+      iex>   "a[data-name]",
+      iex>   "data-name"
+      iex> )
+      ["e.corp"]
+  """.
+
+-spec attribute(binary() | html_tree() | html_node(), binary(), binary()) -> list().
+attribute(Html, Selector, AttributeName) ->
+    Found = find(Html, Selector),
+    attribute_values(Found, AttributeName).
+
+-doc """
+  Returns a list with attribute values from elements.
+
+  ## Examples
+
+      iex> Floki.attribute([{"a", [{"href", "https://google.com"}], ["Google"]}], "href")
+      ["https://google.com"]
+
+      iex> Floki.attribute([{"a", [{"href", "https://google.com"}, {"data-name", "google"}], ["Google"]}], "data-name")
+      ["google"]
+  """.
+
+-spec attribute(html_tree() | html_node(), binary()) -> list(binary()).
+attribute(Elements, AttributeName) ->
+    attribute_values(Elements, AttributeName).
+
+attribute_values(Element, AttrName) when is_tuple(Element) ->
+    attribute_values([Element], AttrName);
+
+attribute_values(Elements, AttrName) ->
+    ReduceFun = fun({_, Attributes, _}, Acc) ->
+                        case attribute_match(Attributes, AttrName) of
+                            {_Attr_name, Value} ->
+                                [Value | Acc];
+                            _ -> Acc
+                        end;
+                   (_, Acc) -> Acc
+                end,
+    Values = lists:foldl(ReduceFun, [], Elements),
+    lists:reverse(Values).
+
+attribute_match(Attributes, AttributeName) ->
+    FindFun = fun({AttrName, _}) ->
+        AttrName == AttributeName
+      end,
+    find_value(Attributes, undefined, FindFun).
 
 -doc """
   Searches for elements inside the HTML tree and update those that matches the selector.
@@ -601,4 +710,20 @@ validate(Proplist, AllowedWithOptions) ->
         _ ->
             % Found unknown keys, so we return an error.
             {error, {unknown_keys, UnknownKeys}}
+    end.
+
+
+%% Mimics Enum.find_value/3
+find_value([], Default, _Fun) ->
+    Default;
+find_value([H|T], Default, Fun) ->
+    case Fun(H) of
+        % In Elixir, `nil` and `false` are falsy.
+        % In Erlang, `false` is the only falsy value.
+        % This case matches on `false` and continues the search.
+        false ->
+            find_value(T, Default, Fun);
+        % Any other result is considered the found value.
+        Result ->
+            Result
     end.

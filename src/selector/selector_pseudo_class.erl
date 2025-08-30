@@ -45,7 +45,7 @@ match_disabled(_HtmlNode) -> false.
 
 match_contains(Tree, HtmlNode, #pseudo_class{value = Value}) ->
     Predicate = fun(Id) ->
-        case map:get(Id, Tree#html_tree.nodes) of
+        case maps:get(Id, Tree#html_tree.nodes) of
           #text{content = Content} ->
                 binary:match(Content, Value) =/= nomatch;
           _ -> false

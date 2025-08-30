@@ -261,11 +261,9 @@ patch_nodes(HtmlTree, OperationWithNodes) ->
 
     lists:foldl(Reducer, HtmlTree, OperationWithNodes).
 
-%% @doc
-%% Mimics the core logic of Elixir's put_in/3 for lists.
--spec put_in(list(), integer(), any()) -> list().
-put_in(List, Index, NewElement) ->
-    lists:replace(Index, NewElement, List).
+-spec put_in(map(), integer(), any()) -> map().
+put_in(Map, Index, NewElement) when is_map(Map) ->
+   Map#{Index => NewElement}.
 
 % Enables using functions from `Enum` and `Stream` modules
 enumerable_count(HtmlTree) ->

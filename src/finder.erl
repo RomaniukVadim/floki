@@ -66,7 +66,10 @@ find(HtmlTreeAsTuple, Selectors) when is_list(Selectors) ->
                     Flatmap = lists:flatmap(Fun, Selectors),
                     Sorted = case length(Flatmap) =:= 0 of
                                  true -> [];
-                                 false -> lists:sort(fun(Item) -> Item#html_node.node_id end, Flatmap)
+                                 false when length(Flatmap) >= 2 ->
+                                     SortFun = fun(A, B) -> A#html_node.node_id =< B#html_node.node_id end,
+                                     lists:sort(SortFun, Flatmap);
+                                 false -> Flatmap
                              end,
                     lists:uniq(Sorted);
                 _ -> undefined

@@ -6,7 +6,7 @@
 
 -export([parse/1]).
 
--define(IS_ATTR_MATCH_TYPE(X), ((X) =:= equal orelse 
+-define(IS_ATTR_MATCH_TYPE(X), ((X) =:= equal orelse
                                 (X) =:= dash_match orelse
                                 (X) =:= includes orelse
                                 (X) =:= prefix_match orelse
@@ -47,7 +47,7 @@ do_parse([{hash, _, Id} | T], Selector) ->
 do_parse([{class, _, Class} | T], Selector) ->
   do_parse(T, Selector#selector{classes = [list_to_binary(Class) | Selector#selector.classes]});
 
-do_parse([{'[', _} | T], Selector) ->
+do_parse([{"[", _} | T], Selector) ->
   {NewT, Result} = consume_attribute(T),
 
   do_parse(NewT, Selector#selector{attributes = [Result | Selector#selector.attributes]});
@@ -114,7 +114,7 @@ do_parse([{plus, _} | T], Selector) ->
 
 do_parse([{tilde, _} | T], Selector) ->
     {RemainingTokens, Combinator} = consume_combinator(T, general_sibling),
-    {Selector#selector{combinator = Combinator}, RemainingTokens}; 
+    {Selector#selector{combinator = Combinator}, RemainingTokens};
 
 do_parse([{unknown, _, Unknown} | T], Selector) ->
     logger:debug("Unknown token ~p. Ignoring.", [Unknown]),
