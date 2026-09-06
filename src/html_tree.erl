@@ -158,13 +158,13 @@ do_delete(Tree, [], StackIds) ->
 
 delete_node_from_nodes(Nodes, HtmlNode) ->
     TreeNodes = maps:remove(HtmlNode#html_node.node_id, Nodes),
-    ParentNode = maps:get(HtmlNode#html_node.parent_node_id, Nodes),
+    ParentNode = maps:get(HtmlNode#html_node.parent_node_id, Nodes, undefined),
 
     case ParentNode =/= undefined of
       true ->
         ChildrenIds = lists:delete(HtmlNode#html_node.node_id, ParentNode#html_node.children_nodes_ids),
         NewParent = ParentNode#html_node{children_nodes_ids = ChildrenIds},
-        TreeNodes#{NewParent#html_node.node_id => newParent};
+        TreeNodes#{NewParent#html_node.node_id => NewParent};
       false ->
         TreeNodes
     end.
