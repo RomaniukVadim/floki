@@ -16,8 +16,7 @@ parse(Expr) when is_binary(Expr) ->
 
     case re:run(ExprDowncase, Regex, [{capture, all_names, binary}]) of
       undefined -> invalid;
-        {match, Captured} ->
-            #{<<"a">> := A, <<"b">> := B} = maps:from_list(Captured),
+        {match, [A, B]} ->
             {ok, build(A, B)}
     end.
 
@@ -44,7 +43,9 @@ parse_num(NStr) ->
     end.
 
 to_string(Functional) ->
-      <<(Functional#selector_functional.a/binary),"x+",(Functional#selector_functional.b)/binary>>.
+    A = integer_to_binary(Functional#selector_functional.a),
+    B = integer_to_binary(Functional#selector_functional.b),
+    <<A/binary, "x+", B/binary>>.
 
 % The "stream" is just a function that produces the next value and the next function.
 -type stream() :: fun(() -> {any(), stream()} | done).

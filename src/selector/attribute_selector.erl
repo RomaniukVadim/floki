@@ -97,10 +97,9 @@ match(Attributes, S = #attribute_selector{match_type = substring_match, flag = <
     AttributeValue = get_value(S#attribute_selector.attribute, Attributes),
     AttributeValueDowcase = list_to_binary(string:lowercase(binary_to_list(AttributeValue))),
     ValueDowncase = list_to_binary(string:lowercase(binary_to_list(S#attribute_selector.value))),
-    Size = byte_size(ValueDowncase),
-    case AttributeValueDowcase of
-        <<ValueDowncase:Size/binary, _/binary>> -> true;
-        _ -> false
+    case binary:match(AttributeValueDowcase, ValueDowncase) of
+        nomatch -> false;
+        _ -> true
     end;
 
   % Case-sensitive matches
@@ -115,11 +114,13 @@ match(Attributes, S = #attribute_selector{match_type = includes, value = Value})
 
 match(Attributes, S = #attribute_selector{match_type = dash_match}) ->
     Value = get_value(S#attribute_selector.attribute, Attributes),
+    SelectorValue = S#attribute_selector.value,
+    Size = byte_size(SelectorValue),
 
-    Value == S#attribute_selector.value orelse case Value of
-                                                   <<"#{s.value}-", _/binary>> -> true;
-                                                   _ -> false
-                                               end;
+    Value == SelectorValue orelse case Value of
+        <<SelectorValue:Size/binary, "-", _/binary>> -> true;
+        _ -> false
+    end;
 
 match(Attributes, S = #attribute_selector{match_type = prefix_match}) ->
 

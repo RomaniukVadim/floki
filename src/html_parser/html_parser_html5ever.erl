@@ -9,7 +9,7 @@
 parse_document(Html, _Args) ->
   case code:ensure_loaded(html5ever) of
     {module, Module} ->
-      case apply(Module, parse, [list_to_binary(Html)]) of
+      case apply(Module, parse, [iolist_to_binary(Html)]) of
         {ok, Result} -> {ok, Result};
         {error, _Message} = Error -> Error
       end;

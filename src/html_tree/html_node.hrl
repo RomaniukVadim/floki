@@ -1,6 +1,6 @@
 -record(html_node, {
     type = <<>> :: binary(),
-    attributes = [] :: [{binary(), binary()}],
+    attributes = [] :: html_attributes(),
     children_nodes_ids = [] :: [pos_integer()],
     node_id = undefined :: pos_integer() | undefined,
     parent_node_id = undefined :: pos_integer() | undefined
