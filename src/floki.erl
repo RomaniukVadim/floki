@@ -530,10 +530,7 @@ attribute_values(Elements, AttrName) ->
     lists:reverse(Values).
 
 attribute_match(Attributes, AttributeName) ->
-    FindFun = fun({AttrName, _}) ->
-        AttrName == AttributeName
-      end,
-    find_value(Attributes, undefined, FindFun).
+    lists:keyfind(AttributeName, 1, Attributes).
 
 -doc """
   Searches for elements inside the HTML tree and update those that matches the selector.
