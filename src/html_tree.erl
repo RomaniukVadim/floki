@@ -136,15 +136,16 @@ to_tuple(Tree, HtmlNode) ->
 
 do_delete(Tree, [], []) -> Tree;
 
-do_delete(Tree, [HtmlNode | T], StackIds) ->
-    NewTreeNodes = delete_node_from_nodes(Tree#html_tree.nodes, HtmlNode),
-    IdsForStack = get_ids_for_delete_stack(HtmlNode),
+do_delete(Tree, [Node | T], StackIds) ->
+    NewTreeNodes = delete_node_from_nodes(Tree#html_tree.nodes, Node),
+    IdsForStack = get_ids_for_delete_stack(Node),
+    NodeId = get_node_id(Node),
 
     do_delete(
       Tree#html_tree{
         nodes = NewTreeNodes,
-        node_ids = lists:delete(HtmlNode#html_node.node_id, Tree#html_tree.node_ids),
-        root_nodes_ids = lists:delete(HtmlNode#html_node.node_id, Tree#html_tree.root_nodes_ids)
+        node_ids = lists:delete(NodeId, Tree#html_tree.node_ids),
+        root_nodes_ids = lists:delete(NodeId, Tree#html_tree.root_nodes_ids)
        },
       T,
       IdsForStack ++ StackIds
@@ -156,18 +157,27 @@ do_delete(Tree, [], StackIds) ->
 
   do_delete(Tree, HtmlNodes, []).
 
-delete_node_from_nodes(Nodes, HtmlNode) ->
-    TreeNodes = maps:remove(HtmlNode#html_node.node_id, Nodes),
-    ParentNode = maps:get(HtmlNode#html_node.parent_node_id, Nodes, undefined),
+delete_node_from_nodes(Nodes, Node) ->
+    NodeId = get_node_id(Node),
+    TreeNodes = maps:remove(NodeId, Nodes),
+    ParentNode = maps:get(get_parent_id(Node), Nodes, undefined),
 
     case ParentNode =/= undefined of
       true ->
-        ChildrenIds = lists:delete(HtmlNode#html_node.node_id, ParentNode#html_node.children_nodes_ids),
+        ChildrenIds = lists:delete(NodeId, ParentNode#html_node.children_nodes_ids),
         NewParent = ParentNode#html_node{children_nodes_ids = ChildrenIds},
         TreeNodes#{NewParent#html_node.node_id => NewParent};
       false ->
         TreeNodes
     end.
+
+get_node_id(#html_node{node_id = Id}) -> Id;
+get_node_id(#text{node_id = Id}) -> Id;
+get_node_id(#comment{node_id = Id}) -> Id.
+
+get_parent_id(#html_node{parent_node_id = Id}) -> Id;
+get_parent_id(#text{parent_node_id = Id}) -> Id;
+get_parent_id(#comment{parent_node_id = Id}) -> Id.
 
 get_ids_for_delete_stack(#html_node{children_nodes_ids = Ids}) -> Ids;
 get_ids_for_delete_stack(_) -> [].
