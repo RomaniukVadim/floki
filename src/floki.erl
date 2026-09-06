@@ -464,11 +464,6 @@ children({_, _, Subtree}, [{include_text, _}]) ->
     Subtree;
 
 children({_, _, _} = HtmlNode, Opts) ->
-    ValidOpts = validate(Opts, [{include_text, true}]),
-    IncludeText = proplists:get_value(include_text, ValidOpts),
-    children(HtmlNode, [{include_text, IncludeText}]);
-
-children({_, _, _} = HtmlNode, Opts) ->
     {ok, ValidOpts} = validate(Opts, [{include_text, true}]),
     IncludeText = proplists:get_value(include_text, ValidOpts),
     children(HtmlNode, [{include_text, IncludeText}]);

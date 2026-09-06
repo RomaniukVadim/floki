@@ -256,18 +256,19 @@ build_tree(NodeIds, Nodes, [], ParentNode,
     ).
 
 patch_nodes(HtmlTree, OperationWithNodes) ->
-  Reducer = fun(NodeWithOp, Tree) ->
-      case NodeWithOp of
-        {update, Node} ->
-          put_in(Tree#html_tree.nodes, Node#html_node.node_id, Node);
+    Reducer = fun(NodeWithOp, Tree) ->
+                      case NodeWithOp of
+                          {update, Node} ->
+                              UpdatedNodes = put_in(Tree#html_tree.nodes, Node#html_node.node_id, Node),
+                              Tree#html_tree{nodes = UpdatedNodes};
 
-        {delete, Node} ->
-          delete_node(Tree, Node);
+                          {delete, Node} ->
+                              delete_node(Tree, Node);
 
-        {no_op, _Node} ->
-          Tree
-      end
-    end,
+                          {no_op, _Node} ->
+                              Tree
+                      end
+              end,
 
     lists:foldl(Reducer, HtmlTree, OperationWithNodes).
 

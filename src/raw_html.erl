@@ -122,12 +122,12 @@ build_raw_html([{Type, Attrs, Children} | Tail],
           ChildrenWrapped = finder:list_wrap(Children),
 
           CurrEncoder =
-            case type of
+          case Type of
               <<"script">> -> no_encoder();
               <<"style">> -> no_encoder();
               <<"title">> -> no_encoder();
               _ -> encoder()
-            end,
+          end,
 
           build_raw_html(
             ChildrenWrapped,
