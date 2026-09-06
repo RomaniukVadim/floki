@@ -1,3 +1,7 @@
+-type html_attribute() :: {binary(), binary()}.
+-type html_attributes() :: [html_attribute()] | html_attributes_map().
+-type html_attributes_map() :: #{binary() => binary()}.
+
 -record(html_node, {
     type = <<>> :: binary(),
     attributes = [] :: html_attributes(),
@@ -6,9 +10,6 @@
     parent_node_id = undefined :: pos_integer() | undefined
 }).
 
--type html_attribute() :: {binary(), binary()}.
--type html_attributes() :: [html_attribute()] | html_attributes_map().
--type html_attributes_map() :: #{binary() => binary()}.
 -type html_declaration() :: {pi, binary(), html_attributes()}.
 -type html_comment() :: {comment, binary()}.
 -type html_doctype() :: {doctype, binary(), binary(), binary()}.
