@@ -97,13 +97,17 @@ encode(<<"<", Rest/bits>>, Skip, Original, Acc, Len) ->
     Part = binary:part(Original, Skip, Len),
     encode(Rest, Skip + Len + 1, Original, [Acc, Part | "&lt;"]);
 encode(<<">", Rest/bits>>, Skip, Original, Acc, Len) ->
-    encode(Rest, Skip + Len + 1, Original, [Acc | "&gt;"]);
+    Part = binary:part(Original, Skip, Len),
+    encode(Rest, Skip + Len + 1, Original, [Acc, Part | "&gt;"]);
 encode(<<"&", Rest/bits>>, Skip, Original, Acc, Len) ->
-    encode(Rest, Skip + Len + 1, Original, [Acc | "&amp;"]);
+    Part = binary:part(Original, Skip, Len),
+    encode(Rest, Skip + Len + 1, Original, [Acc, Part | "&amp;"]);
 encode(<<"\"", Rest/bits>>, Skip, Original, Acc, Len) ->
-    encode(Rest, Skip + Len + 1, Original, [Acc | "&quot;"]);
+    Part = binary:part(Original, Skip, Len),
+    encode(Rest, Skip + Len + 1, Original, [Acc, Part | "&quot;"]);
 encode(<<"'", Rest/bits>>, Skip, Original, Acc, Len) ->
-    encode(Rest, Skip + Len + 1, Original, [Acc | "&#39;"]);
+    Part = binary:part(Original, Skip, Len),
+    encode(Rest, Skip + Len + 1, Original, [Acc, Part | "&#39;"]);
 
 % If we find another safe character, just increment the length counter.
 encode(<<_Char, Rest/bits>>, Skip, Original, Acc, Len) ->

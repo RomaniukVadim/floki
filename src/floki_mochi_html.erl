@@ -541,7 +541,7 @@ tokeninize_charref_surrogate_pair(Bin, S = #decoder{offset = O}, C1) ->
     case Bin of
         <<_:O/binary, $&, _/binary>> ->
             case tokenize_charref_raw(Bin, ?INC_COL(S), O + 1) of
-                {C2, S1} when C2 >= 16#D800 andalso C1 =< 16#DFFF ->
+                {C2, S1} when C2 >= 16#D800 andalso C2 =< 16#DFFF ->
                     {
                         {data,
                             unicode:characters_to_binary(

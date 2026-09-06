@@ -32,7 +32,7 @@ get_text({<<"br">>, _, _}, Acc, _, _) -> [Acc, <<"\n">>];
 get_text({<<"input">>, Attrs, _}, Acc, _, true) ->
     [Acc, text_extractor:extract_input_value(Attrs)];
 
-get_text({"textarea", Attrs, _}, Acc, _, true) ->
+get_text({<<"textarea">>, Attrs, _}, Acc, _, true) ->
     [Acc, text_extractor:extract_input_value(Attrs)];
 
 get_text({_, _, Nodes}, Acc, Sep, Include_inputs) ->
