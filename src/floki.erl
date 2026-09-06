@@ -713,19 +713,3 @@ validate(Proplist, AllowedWithOptions) ->
             % Found unknown keys, so we return an error.
             {error, {unknown_keys, UnknownKeys}}
     end.
-
-
-%% Mimics Enum.find_value/3
-find_value([], Default, _Fun) ->
-    Default;
-find_value([H|T], Default, Fun) ->
-    case Fun(H) of
-        % In Elixir, `nil` and `false` are falsy.
-        % In Erlang, `false` is the only falsy value.
-        % This case matches on `false` and continues the search.
-        false ->
-            find_value(T, Default, Fun);
-        % Any other result is considered the found value.
-        Result ->
-            Result
-    end.
